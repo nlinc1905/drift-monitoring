@@ -17,8 +17,5 @@ RUN git clone https://github.com/coderpendent/evidently.git && \
     cd evidently && \
     python3 -m pip install --user -e .
 
-# Create the datasets needed for the example
-CMD [ "python3", "prepare_datasets.py"]
-
 # Run app.py with Flask
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]
