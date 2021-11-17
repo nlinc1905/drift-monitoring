@@ -1,24 +1,24 @@
-FROM ubuntu:18.04
-
-ENV DEBIAN_FRONTEND="noninteractive"
-ENV TZ="America/New_York"
+FROM python:3.8-slim-buster
 
 # Install Linux dependencies
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y python3 python3-setuptools python3-pip git
+    apt-get install -y git
 
 COPY . /app
 WORKDIR /app
 
 # Install Python library dependencies
 RUN python3 -m pip install --user --upgrade pip && \
-    python3 -m pip install -r requirements.txt --user
+    python3 -m pip install -r requirements.txt --user --default-timeout=1000 --no-cache-dir
 
 # Install the forked version of EvidentlyAI
 RUN git clone https://github.com/coderpendent/evidently.git && \
     cd evidently && \
     python3 -m pip install --user -e .
 
+# Create the datasets needed for the example
+CMD [ "python3", "prepare_datasets.py"]
+
 # Run app.py with Flask
-# CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]
+CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]
