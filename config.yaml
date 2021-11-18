@@ -1,19 +1,32 @@
-data_format:
-  separator: ","
-  header: true
-  date_column: "dteday"
 column_mapping:
-  target: "cnt"
-  prediction: "prediction"
-  datetime: "dteday"
-  numerical_features: ['mnth', 'temp', 'atemp', 'hum', 'windspeed']
-  categorical_features: ['season', 'holiday', 'weekday', 'workingday', 'weathersit', ]
+  categorical_features:
+  - _tethers
+  - architectures
+  - downey
+  - educated
+  - esoteric
+  - fervent
+  - prohibiting
+  - spectral
+  - texting
+  - waarnemer
+  datetime: __date__
+  numerical_features: []
+  prediction: __predicted__
+  target: __target__
+data_format:
+  date_column: __date__
+  header: true
+  separator: ','
 pretty_print: true
 service:
-  reference_path: "reference.csv"
-  min_reference_size: 30
-  use_reference: true
-  moving_reference: false
-  window_size: 30
   calculation_period_sec: 10
-  monitors: [ "data_drift", "regression_performance" ]
+  min_reference_size: 30
+  monitors:
+  - data_drift
+  - concept_drift
+  - regression_performance
+  moving_reference: false
+  reference_path: reference.csv
+  use_reference: true
+  window_size: 30

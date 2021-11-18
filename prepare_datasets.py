@@ -58,7 +58,7 @@ def write_config_yaml(feature_names):
             moving_reference = False,
             window_size = 30,
             calculation_period_sec = 10,
-            monitors = ["data_drift", "regression_performance"],
+            monitors = ["data_drift", "concept_drift", "regression_performance"],
         ),
     )
 
