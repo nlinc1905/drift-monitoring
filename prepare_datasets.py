@@ -69,17 +69,11 @@ def write_config_yaml(feature_names):
 
 def prepare_reference_dataset():
     """
-
-    :return:
+    Prepares a selection of news articles as the reference dataset (a.k.k. the training dataset, as
+    the model is trained on this data).
     """
     train = fetch_20newsgroups(
         subset="train",
-        categories=["sci.space", "soc.religion.christian"],
-        shuffle=True,
-        random_state=SEED
-    )
-    test = fetch_20newsgroups(
-        subset="test",
         categories=["sci.space", "soc.religion.christian"],
         shuffle=True,
         random_state=SEED
@@ -89,7 +83,6 @@ def prepare_reference_dataset():
     bow_model = train_bow_model(text_input=train.data, sklearn_vectorizer=CountVectorizer)
     features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
     train_vect = bow_model.transform(train.data)
-    test_vect = bow_model.transform(test.data)
 
     # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
     # save it to the artifacts folder so that it can be used to process new data
@@ -113,7 +106,6 @@ def prepare_reference_dataset():
 
     model.fit(train_vect, train.target)
     train_preds = model.predict(train_vect)
-    test_preds = model.predict(test_vect)
 
     # save the trained model to artifacts, since it will be required to process new data
     with open("data/artifacts/model.pkl", "wb") as pfile:
@@ -138,19 +130,9 @@ def prepare_reference_dataset():
     train_df["__predicted__"] = train_preds
     train_df["__date__"] = datetime.today() - timedelta(days=1)
 
-    test_df = pd.DataFrame(
-        test_vect[:, sampled_features].todense(),
-        columns=sampled_feature_names
-    )
-    test_df["__target__"] = test.target
-    test_df["__predicted__"] = test_preds
-    test_df["__date__"] = datetime.today()
-
     train_df.to_csv("data/reference.csv", index=False)
-    test_df.to_csv("data/production.csv", index=False)
 
-    logging.info(f"Reference dataset create with {train_df.shape[0]} rows")
-    logging.info(f"Production dataset create with {test_df.shape[0]} rows")
+    logging.info(f"Reference dataset created with {train_df.shape[0]} rows")
 
     # overwrite config.yaml
     write_config_yaml(feature_names=sampled_feature_names)
@@ -158,25 +140,28 @@ def prepare_reference_dataset():
 
 def prepare_production_dataset():
     """
-
-    :return:
+    Prepares a dataset to be used as the production data.  This data will be passed to the model API
+    for predictions, and will be compared to the reference dataset for drift.
     """
-    pass
+    test = fetch_20newsgroups(
+        subset="test",
+        categories=["sci.space", "soc.religion.christian"],
+        shuffle=True,
+        random_state=SEED
+    )
+
+    # test_df should contain the fields to be sent to the API
+    test_df = pd.DataFrame({
+        "client_id": [1] * len(test.target),  # dummy
+        "body": test.data,
+        "target": test.target,
+    })
+
+    test_df.to_csv("data/production.csv", index=False)
+
+    logging.info(f"Production dataset created with {test_df.shape[0]} rows")
 
 
 if __name__ == '__main__':
     prepare_reference_dataset()
     prepare_production_dataset()
-
-
-"""
-YOU LEFT OFF HERE
-
-then turn the model into an API and read from there (will need to modify app.py's iterate() 
-to pull from your new API)
-figure out how the zms-daemon works, so that you know what to expect to receive from the API, 
-then use that info to adapt the API with toy data here
-create tests to check for different types of drift
-extract this folder to its own container, then deploy to kubernetes
-
-"""

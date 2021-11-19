@@ -7,3 +7,9 @@ CisionAI's API.
 An important difference between CisionAI and this API is that this API separates feature engineering from modeling, 
 so that it is possible to get feature information from the model, for the purpose of data drift detection.  CisionAI 
 packages the model as a scikit-learn pipeline, meaning the model and its features are versioned together.  
+
+## Swagger Documentation
+
+This API's swagger documentation can be found by going to [localhost:8000/docs](localhost:8000/docs) after the service 
+is up and running.  To get it up and running, run `docker-compose up`.  The swagger documentation shows example 
+requests and responses.
