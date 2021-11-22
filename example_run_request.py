@@ -40,7 +40,6 @@ if __name__ == '__main__':
             data=json.dumps(data, cls=NumpyEncoder),
         )
         model_api_response_df = pd.read_json(json.loads(model_api_response.text), orient="index")
-        model_api_response_df["__date__"] = pd.to_datetime(model_api_response_df["__date__"])
         data = model_api_response_df.to_dict()
         breakpoint()
         """
