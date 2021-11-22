@@ -1,3 +1,4 @@
+import argparse
 import logging
 import random
 import pickle
@@ -111,7 +112,7 @@ def prepare_reference_dataset(drift_test_type=None):
     train_target = [i for idx, i in enumerate(train.target) if idx in train_indices_to_keep]
 
     # apply filters determined by drift_test_type
-    space_indices = np.where(train_target==0)[0].tolist()
+    space_indices = np.where(np.array(train_target)==0)[0].tolist()
 
     if drift_test_type is not None and (drift_test_type == "data_drift" or drift_test_type == "concept_drift"):
         # train features for space (bow_model will train on train_data_filtered)
@@ -249,5 +250,14 @@ def prepare_production_dataset(drift_test_type=None):
 
 
 if __name__ == '__main__':
-    prepare_reference_dataset()
-    prepare_production_dataset()
+    parser = argparse.ArgumentParser(description='Prepare datasets for testing different types of drift detection.')
+    parser.add_argument(
+        '-dtt', '--drift_test_type',
+        choices=['data_drift', 'prior_drift', 'concept_drift'],
+        help='Enter 1 of [data_drift, prior_drift, concept_drift].  If none specified, defaults to None',
+        required=False
+    )
+    args = vars(parser.parse_args())
+
+    prepare_reference_dataset(drift_test_type=args['drift_test_type'])
+    prepare_production_dataset(drift_test_type=args['drift_test_type'])
