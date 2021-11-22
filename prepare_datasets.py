@@ -2,6 +2,7 @@ import logging
 import random
 import pickle
 import pandas as pd
+import numpy as np
 from ruamel import yaml
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -67,10 +68,21 @@ def write_config_yaml(feature_names):
         yaml.dump(output, outfile, default_flow_style=False)
 
 
-def prepare_reference_dataset():
+def prepare_reference_dataset(drift_test_type=None):
     """
     Prepares a selection of news articles as the reference dataset (a.k.k. the training dataset, as
     the model is trained on this data).
+
+    :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift]
+        for data drift test:
+          train features for science data, test features for religion data
+          train on mixed data, test on mixed data
+        for prior drift test:
+          train features for mixed data, test features for mixed data
+          train on science data, test on religion data
+        for concept drift test:
+          train features for science data, test features for religion data
+          train on science data, test on religion data
     """
     train = fetch_20newsgroups(
         subset="train",
@@ -79,33 +91,115 @@ def prepare_reference_dataset():
         random_state=SEED
     )
 
-    # create features for model - ensure to train BoW only on training data
-    bow_model = train_bow_model(text_input=train.data, sklearn_vectorizer=CountVectorizer)
-    features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
-    train_vect = bow_model.transform(train.data)
-
-    # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
-    # save it to the artifacts folder so that it can be used to process new data
-    with open("data/artifacts/data_processor.pkl", "wb") as pfile:
-        pickle.dump(bow_model, pfile)
-
     # map the targets to what they mean
     target_map = {
         0: "space",
         1: "christian",
     }
 
-    model = SVC(
-        C=1.0,
-        kernel='rbf',
-        gamma='scale',  # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
-        probability=False,  # set to True to enable predict_proba
-        tol=0.001,
-        random_state=SEED
-    )
+    # balance the dataset
+    minority_class_nbr_samples = pd.DataFrame(train.target).value_counts().min()
+    train_indices_to_keep = pd.DataFrame(train.target).groupby(0)[0].apply(
+        lambda x: x.sample(minority_class_nbr_samples)
+    ).droplevel(0).index.tolist()
+    train_data = [i for idx, i in enumerate(train.data) if idx in train_indices_to_keep]
+    train_target = [i for idx, i in enumerate(train.target) if idx in train_indices_to_keep]
 
-    model.fit(train_vect, train.target)
-    train_preds = model.predict(train_vect)
+    # apply filters determined by drift_test_type
+    space_indices = np.where(train_target==0)[0].tolist()
+    religion_indices = np.where(train_target==1)[0].tolist()
+    if drift_test_type is not None and drift_test_type == "data_drift":
+        # train features for space (bow_model will train on train_data_filtered)
+        # train model on mixed (model will train on train_data)
+
+        train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
+        bow_model = train_bow_model(text_input=train_data_filtered, sklearn_vectorizer=CountVectorizer)
+        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+        train_vect = bow_model.transform(train_data)
+
+        model = SVC(
+            C=1.0,
+            kernel='rbf',
+            gamma='scale',
+            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
+            probability=False,  # set to True to enable predict_proba
+            tol=0.001,
+            random_state=SEED
+        )
+
+        model.fit(train_vect, train_target)
+        train_preds = model.predict(train_vect)
+
+    elif drift_test_type is not None and drift_test_type == "prior_drift":
+        # train features for mixed (bow_model will train on train_data)
+        # train model on space (model will train on train_data_filtered)
+
+        bow_model = train_bow_model(text_input=train_data, sklearn_vectorizer=CountVectorizer)
+        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+        train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
+        train_target_filtered = [i for idx, i in enumerate(train_target) if idx in space_indices]
+        train_vect = bow_model.transform(train_data_filtered)
+
+        model = SVC(
+            C=1.0,
+            kernel='rbf',
+            gamma='scale',
+            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
+            probability=False,  # set to True to enable predict_proba
+            tol=0.001,
+            random_state=SEED
+        )
+
+        model.fit(train_vect, train_target_filtered)
+        train_preds = model.predict(train_vect)
+
+    elif drift_test_type is not None and drift_test_type == "concept_drift":
+        # train features for space (bow_model will train on train_data_filtered)
+        # train model on space (model will train on train_data_filtered)
+
+        train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
+        train_target_filtered = [i for idx, i in enumerate(train_target) if idx in space_indices]
+        bow_model = train_bow_model(text_input=train_data_filtered, sklearn_vectorizer=CountVectorizer)
+        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+        train_vect = bow_model.transform(train_data_filtered)
+
+        model = SVC(
+            C=1.0,
+            kernel='rbf',
+            gamma='scale',
+            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
+            probability=False,  # set to True to enable predict_proba
+            tol=0.001,
+            random_state=SEED
+        )
+
+        model.fit(train_vect, train_target_filtered)
+        train_preds = model.predict(train_vect)
+
+    else:
+        # do no filter anything
+        # create features for model - ensure to train BoW only on training data
+        bow_model = train_bow_model(text_input=train_data, sklearn_vectorizer=CountVectorizer)
+        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+        train_vect = bow_model.transform(train_data)
+
+        model = SVC(
+            C=1.0,
+            kernel='rbf',
+            gamma='scale',
+            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
+            probability=False,  # set to True to enable predict_proba
+            tol=0.001,
+            random_state=SEED
+        )
+
+        model.fit(train_vect, train_target)
+        train_preds = model.predict(train_vect)
+
+    # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
+    # save it to the artifacts folder so that it can be used to process new data
+    with open("data/artifacts/data_processor.pkl", "wb") as pfile:
+        pickle.dump(bow_model, pfile)
 
     # save the trained model to artifacts, since it will be required to process new data
     with open("data/artifacts/model.pkl", "wb") as pfile:
@@ -126,7 +220,7 @@ def prepare_reference_dataset():
         train_vect[:, sampled_features].todense(),
         columns=sampled_feature_names
     )
-    train_df["__target__"] = train.target
+    train_df["__target__"] = train_target
     train_df["__predicted__"] = train_preds
     train_df["__date__"] = datetime.today() - timedelta(days=1)
 
@@ -138,10 +232,21 @@ def prepare_reference_dataset():
     write_config_yaml(feature_names=sampled_feature_names)
 
 
-def prepare_production_dataset():
+def prepare_production_dataset(drift_test_type=None):
     """
     Prepares a dataset to be used as the production data.  This data will be passed to the model API
     for predictions, and will be compared to the reference dataset for drift.
+
+    :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift]
+        for data drift test:
+          train features for science data, test features for religion data
+          train on mixed data, test on mixed data
+        for prior drift test:
+          train features for mixed data, test features for mixed data
+          train on science data, test on religion data
+        for concept drift test:
+          train features for science data, test features for religion data
+          train on science data, test on religion data
     """
     test = fetch_20newsgroups(
         subset="test",
