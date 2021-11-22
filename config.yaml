@@ -1,15 +1,15 @@
 column_mapping:
   categorical_features:
-  - _tethers
-  - architectures
-  - downey
-  - educated
-  - esoteric
-  - fervent
-  - prohibiting
-  - spectral
-  - texting
-  - waarnemer
+  - _the_
+  - arctic
+  - drastically
+  - effort
+  - esteem
+  - fierce
+  - propoganda
+  - sponsored
+  - thief
+  - warrior
   datetime: __date__
   numerical_features: []
   prediction: __predicted__

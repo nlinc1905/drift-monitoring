@@ -74,15 +74,15 @@ def prepare_reference_dataset(drift_test_type=None):
     the model is trained on this data).
 
     :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift]
-        for data drift test:
-          train features for science data, test features for religion data
-          train on mixed data, test on mixed data
-        for prior drift test:
-          train features for mixed data, test features for mixed data
-          train on science data, test on religion data
-        for concept drift test:
-          train features for science data, test features for religion data
-          train on science data, test on religion data
+        for data drift test (alter the features only, leave labels alone):
+          train features on space data, train model on mixed data
+          test on hockey data (model assumes the labels are still for space/religion)
+        for prior drift test (alter the labels only, leave features alone):
+          train features on mixed data, train model on mixed data
+          test on space data
+        for concept drift test (alter both the features and labels):
+          train features on space data, train model on mixed data
+          test on religion data
     """
     train = fetch_20newsgroups(
         subset="train",
@@ -107,10 +107,10 @@ def prepare_reference_dataset(drift_test_type=None):
 
     # apply filters determined by drift_test_type
     space_indices = np.where(train_target==0)[0].tolist()
-    religion_indices = np.where(train_target==1)[0].tolist()
-    if drift_test_type is not None and drift_test_type == "data_drift":
+
+    if drift_test_type is not None and (drift_test_type == "data_drift" or drift_test_type == "concept_drift"):
         # train features for space (bow_model will train on train_data_filtered)
-        # train model on mixed (model will train on train_data)
+        # train model on mixed (model will train on train_data, train_target)
 
         train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
         bow_model = train_bow_model(text_input=train_data_filtered, sklearn_vectorizer=CountVectorizer)
@@ -130,55 +130,10 @@ def prepare_reference_dataset(drift_test_type=None):
         model.fit(train_vect, train_target)
         train_preds = model.predict(train_vect)
 
-    elif drift_test_type is not None and drift_test_type == "prior_drift":
+    elif drift_test_type is None or (drift_test_type is not None and drift_test_type == "prior_drift"):
         # train features for mixed (bow_model will train on train_data)
-        # train model on space (model will train on train_data_filtered)
+        # train model on mixed (model will train on train_data, train_target)
 
-        bow_model = train_bow_model(text_input=train_data, sklearn_vectorizer=CountVectorizer)
-        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
-        train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
-        train_target_filtered = [i for idx, i in enumerate(train_target) if idx in space_indices]
-        train_vect = bow_model.transform(train_data_filtered)
-
-        model = SVC(
-            C=1.0,
-            kernel='rbf',
-            gamma='scale',
-            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
-            probability=False,  # set to True to enable predict_proba
-            tol=0.001,
-            random_state=SEED
-        )
-
-        model.fit(train_vect, train_target_filtered)
-        train_preds = model.predict(train_vect)
-
-    elif drift_test_type is not None and drift_test_type == "concept_drift":
-        # train features for space (bow_model will train on train_data_filtered)
-        # train model on space (model will train on train_data_filtered)
-
-        train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
-        train_target_filtered = [i for idx, i in enumerate(train_target) if idx in space_indices]
-        bow_model = train_bow_model(text_input=train_data_filtered, sklearn_vectorizer=CountVectorizer)
-        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
-        train_vect = bow_model.transform(train_data_filtered)
-
-        model = SVC(
-            C=1.0,
-            kernel='rbf',
-            gamma='scale',
-            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
-            probability=False,  # set to True to enable predict_proba
-            tol=0.001,
-            random_state=SEED
-        )
-
-        model.fit(train_vect, train_target_filtered)
-        train_preds = model.predict(train_vect)
-
-    else:
-        # do no filter anything
-        # create features for model - ensure to train BoW only on training data
         bow_model = train_bow_model(text_input=train_data, sklearn_vectorizer=CountVectorizer)
         features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
         train_vect = bow_model.transform(train_data)
@@ -238,28 +193,49 @@ def prepare_production_dataset(drift_test_type=None):
     for predictions, and will be compared to the reference dataset for drift.
 
     :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift]
-        for data drift test:
-          train features for science data, test features for religion data
-          train on mixed data, test on mixed data
-        for prior drift test:
-          train features for mixed data, test features for mixed data
-          train on science data, test on religion data
-        for concept drift test:
-          train features for science data, test features for religion data
-          train on science data, test on religion data
+        for data drift test (alter the features only, leave labels alone):
+          train features on space data, train model on mixed data
+          test on hockey data (model assumes the labels are still for space/religion)
+        for prior drift test (alter the labels only, leave features alone):
+          train features on mixed data, train model on mixed data
+          test on space data
+        for concept drift test (alter both the features and labels):
+          train features on space data, train model on mixed data
+          test on religion data
     """
+    if drift_test_type is not None and drift_test_type == "data_drift":
+        categories = ["rec.sport.hockey"]
+    elif drift_test_type is not None and drift_test_type == "prior_drift":
+        categories = ["sci.space"]
+    elif drift_test_type is not None and drift_test_type == "concept_drift":
+        categories = ["soc.religion.christian"]
+    else:
+        categories = ["sci.space", "soc.religion.christian"]
+
     test = fetch_20newsgroups(
         subset="test",
-        categories=["sci.space", "soc.religion.christian"],
+        categories=categories,
         shuffle=True,
         random_state=SEED
     )
 
+    # balance the dataset if more than 1 class
+    if len(set(test.target)) > 1:
+        minority_class_nbr_samples = pd.DataFrame(test.target).value_counts().min()
+        test_indices_to_keep = pd.DataFrame(test.target).groupby(0)[0].apply(
+            lambda x: x.sample(minority_class_nbr_samples)
+        ).droplevel(0).index.tolist()
+        test_data = [i for idx, i in enumerate(test.data) if idx in test_indices_to_keep]
+        test_target = [i for idx, i in enumerate(test.target) if idx in test_indices_to_keep]
+    else:
+        test_data = test.data
+        test_target = test.target
+
     # test_df should contain the fields to be sent to the API
     test_df = pd.DataFrame({
-        "client_id": [1] * len(test.target),  # dummy
-        "body": test.data,
-        "target": test.target,
+        "client_id": [1] * len(test_target),  # dummy
+        "body": test_data,
+        "target": test_target,
     })
 
     test_df.to_csv("data/production.csv", index=False)
