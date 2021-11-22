@@ -40,23 +40,12 @@ if __name__ == '__main__':
             data=json.dumps(data, cls=NumpyEncoder),
         )
         model_api_response_df = pd.read_json(json.loads(model_api_response.text), orient="index")
-        data = model_api_response_df.to_dict()
-        breakpoint()
-        """
-        YOU LEFT OFF HERE - troubleshoot the 500 error caused by div by 0
-        
-        is it bc the values are 0? - if yes, add 1 to all frequencies of 0
-        is it bc there's only 1 record? - if yes, break into chunks in line 32
-        test each of these individually, rebuild, run this line:
-        requests.post('http://localhost:5000/iterate',data=json.dumps([data], cls=NumpyEncoder),headers={"content-type": "application/json"})
-        
-        error occurred in evidently's utils.py, p2 = float(sum(curr)) / n2, n2 = 0
-        """
+        data = model_api_response_df.to_dict(orient="records")
 
         # now send the model API's response to the evidently monitoring service API
         requests.post(
             'http://localhost:5000/iterate',
-            data=json.dumps([data], cls=NumpyEncoder),
+            data=json.dumps(data, cls=NumpyEncoder),
             headers={"content-type": "application/json"}
         )
 
