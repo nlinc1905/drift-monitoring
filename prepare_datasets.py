@@ -26,7 +26,12 @@ def train_bow_model(text_input, sklearn_vectorizer):
     :return: vectorizer
     """
     assert isinstance(text_input, Iterable) and not isinstance(text_input, str)
-    vectorizer = sklearn_vectorizer(stop_words="english")
+    vectorizer = sklearn_vectorizer(
+        stop_words="english",
+        strip_accents="ascii",
+        min_df=50,
+        max_df=1.0
+    )
     vectorizer.fit(text_input)
     return vectorizer
 
@@ -100,7 +105,7 @@ def prepare_reference_dataset(drift_test_type=None):
     # balance the dataset
     minority_class_nbr_samples = pd.DataFrame(train.target).value_counts().min()
     train_indices_to_keep = pd.DataFrame(train.target).groupby(0)[0].apply(
-        lambda x: x.sample(minority_class_nbr_samples)
+        lambda x: x.sample(minority_class_nbr_samples, random_state=SEED)
     ).droplevel(0).index.tolist()
     train_data = [i for idx, i in enumerate(train.data) if idx in train_indices_to_keep]
     train_target = [i for idx, i in enumerate(train.target) if idx in train_indices_to_keep]
@@ -223,7 +228,7 @@ def prepare_production_dataset(drift_test_type=None):
     if len(set(test.target)) > 1:
         minority_class_nbr_samples = pd.DataFrame(test.target).value_counts().min()
         test_indices_to_keep = pd.DataFrame(test.target).groupby(0)[0].apply(
-            lambda x: x.sample(minority_class_nbr_samples)
+            lambda x: x.sample(minority_class_nbr_samples, random_state=SEED)
         ).droplevel(0).index.tolist()
         test_data = [i for idx, i in enumerate(test.data) if idx in test_indices_to_keep]
         test_target = [i for idx, i in enumerate(test.target) if idx in test_indices_to_keep]
