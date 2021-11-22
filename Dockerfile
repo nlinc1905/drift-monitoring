@@ -1,9 +1,10 @@
 FROM python:3.8-slim-buster
 
-# Install Linux dependencies
+# Install Linux dependencies, vim only for helping with development
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git
+    apt-get install -y git && \
+    apt-get install -y vim
 
 COPY . /app
 WORKDIR /app
