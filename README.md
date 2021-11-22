@@ -7,6 +7,7 @@ This app pulls down the evidently fork for model drift monitoring.  It then buil
 * Prometheus on port 9090
 * Grafana on port 3000
 * Evidently on port 5000
+
 The evidently service is a Flask API defined by app.py.  The monitoring_service folder in the evidently repo fork contains the code for serving model drift monitoring metrics.  The evidently Flask API pulls from the code in the monitoring_service folder to serve metrics that Prometheus scrapes on a periodic basis (15 seconds by default).
 
 To change Prometheus' scraping behavior, change config/prometheus.yml 

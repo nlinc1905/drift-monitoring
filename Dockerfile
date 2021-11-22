@@ -1,9 +1,10 @@
 FROM python:3.8-slim-buster
 
-# Install Linux dependencies
+# Install Linux dependencies, vim only for helping with development
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git
+    apt-get install -y git && \
+    apt-get install -y vim
 
 COPY . /app
 WORKDIR /app
@@ -16,6 +17,9 @@ RUN python3 -m pip install --user --upgrade pip && \
 RUN git clone https://github.com/coderpendent/evidently.git && \
     cd evidently && \
     python3 -m pip install --user -e .
+
+# Run the prepare data script
+RUN python3 prepare_datasets.py
 
 # Run app.py with Flask
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]

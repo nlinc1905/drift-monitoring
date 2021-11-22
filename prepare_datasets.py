@@ -1,5 +1,6 @@
 import logging
 import random
+import pickle
 import pandas as pd
 from ruamel import yaml
 from sklearn.datasets import fetch_20newsgroups
@@ -21,12 +22,12 @@ def train_bow_model(text_input, sklearn_vectorizer):
     :param text_input: list of documents
     :param sklearn_vectorizer: scikit-learn vectorizer object
 
-    :return: vectorizer, np array of vectorized text
+    :return: vectorizer
     """
     assert isinstance(text_input, Iterable) and not isinstance(text_input, str)
     vectorizer = sklearn_vectorizer(stop_words="english")
     vectorizer.fit(text_input)
-    return vectorizer, vectorizer.transform(text_input)
+    return vectorizer
 
 
 def write_config_yaml(feature_names):
@@ -52,7 +53,7 @@ def write_config_yaml(feature_names):
         ),
         pretty_print = True,
         service = dict(
-            reference_path = "reference.csv",
+            reference_path = "data/reference.csv",
             min_reference_size = 30,
             use_reference = True,
             moving_reference = False,
@@ -66,25 +67,27 @@ def write_config_yaml(feature_names):
         yaml.dump(output, outfile, default_flow_style=False)
 
 
-if __name__ == '__main__':
+def prepare_reference_dataset():
+    """
+    Prepares a selection of news articles as the reference dataset (a.k.k. the training dataset, as
+    the model is trained on this data).
+    """
     train = fetch_20newsgroups(
         subset="train",
         categories=["sci.space", "soc.religion.christian"],
         shuffle=True,
         random_state=SEED
     )
-    test = fetch_20newsgroups(
-        subset="test",
-        categories=["sci.space", "soc.religion.christian"],
-        shuffle=True,
-        random_state=SEED
-    )
 
     # create features for model - ensure to train BoW only on training data
-    bow_model, train_bow = train_bow_model(text_input=train.data, sklearn_vectorizer=CountVectorizer)
+    bow_model = train_bow_model(text_input=train.data, sklearn_vectorizer=CountVectorizer)
     features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
     train_vect = bow_model.transform(train.data)
-    test_vect = bow_model.transform(test.data)
+
+    # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
+    # save it to the artifacts folder so that it can be used to process new data
+    with open("data/artifacts/data_processor.pkl", "wb") as pfile:
+        pickle.dump(bow_model, pfile)
 
     # map the targets to what they mean
     target_map = {
@@ -103,12 +106,21 @@ if __name__ == '__main__':
 
     model.fit(train_vect, train.target)
     train_preds = model.predict(train_vect)
-    test_preds = model.predict(test_vect)
+
+    # save the trained model to artifacts, since it will be required to process new data
+    with open("data/artifacts/model.pkl", "wb") as pfile:
+        pickle.dump(model, pfile)
 
     # randomly sample from the features, and put everything together in a Pandas df for Evidently to read
     nbr_features_to_sample = 10
     sampled_features = random.sample([i for i in range(len(features))], k=nbr_features_to_sample)
     sampled_feature_names = [f for f_idx, f in enumerate(features) if f_idx in sampled_features]
+
+    # save the sampled features as artifacts, so they can be used to sample the features for test data
+    with open("data/artifacts/sampled_features.pkl", "wb") as pfile:
+        pickle.dump(sampled_features, pfile)
+    with open("data/artifacts/sampled_feature_names.pkl", "wb") as pfile:
+        pickle.dump(sampled_feature_names, pfile)
 
     train_df = pd.DataFrame(
         train_vect[:, sampled_features].todense(),
@@ -118,31 +130,38 @@ if __name__ == '__main__':
     train_df["__predicted__"] = train_preds
     train_df["__date__"] = datetime.today() - timedelta(days=1)
 
-    test_df = pd.DataFrame(
-        test_vect[:, sampled_features].todense(),
-        columns=sampled_feature_names
-    )
-    test_df["__target__"] = test.target
-    test_df["__predicted__"] = test_preds
-    test_df["__date__"] = datetime.today()
+    train_df.to_csv("data/reference.csv", index=False)
 
-    train_df.to_csv("reference.csv", index=False)
-    test_df.to_csv("production.csv", index=False)
-
-    logging.info(f"Reference dataset create with {train_df.shape[0]} rows")
-    logging.info(f"Production dataset create with {test_df.shape[0]} rows")
+    logging.info(f"Reference dataset created with {train_df.shape[0]} rows")
 
     # overwrite config.yaml
     write_config_yaml(feature_names=sampled_feature_names)
 
 
-"""
-YOU LEFT OFF HERE
+def prepare_production_dataset():
+    """
+    Prepares a dataset to be used as the production data.  This data will be passed to the model API
+    for predictions, and will be compared to the reference dataset for drift.
+    """
+    test = fetch_20newsgroups(
+        subset="test",
+        categories=["sci.space", "soc.religion.christian"],
+        shuffle=True,
+        random_state=SEED
+    )
 
-modify grafana dashboard to show target drift too
-then turn the model into an API and read from there (will need to modify app.py's iterate() 
-to pull from your new API)
-extract this folder to its own container, then deploy to kubernetes
+    # test_df should contain the fields to be sent to the API
+    test_df = pd.DataFrame({
+        "client_id": [1] * len(test.target),  # dummy
+        "body": test.data,
+        "target": test.target,
+    })
 
-TOMORROW
-"""
+    test_df.to_csv("data/production.csv", index=False)
+
+    logging.info(f"Production dataset created with {test_df.shape[0]} rows")
+
+
+if __name__ == '__main__':
+    prepare_reference_dataset()
+    prepare_production_dataset()

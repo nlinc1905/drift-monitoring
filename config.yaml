@@ -27,6 +27,6 @@ service:
   - concept_drift
   - regression_performance
   moving_reference: false
-  reference_path: reference.csv
+  reference_path: data/reference.csv
   use_reference: true
   window_size: 30
