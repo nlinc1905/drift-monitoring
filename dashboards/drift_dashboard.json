@@ -393,7 +393,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "evidently:data_drift:n_drifted_features / evidently:data_drift:share_drifted_features",
+          "expr": "evidently:data_drift:n_features",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -408,7 +408,7 @@
     },
     {
       "datasource": "Prometheus",
-      "description": "Data drift is detected when the Chi-squared p-value falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nFeature frequencies are treated as categorical bins.",
+      "description": "Data drift is detected when the Kolmogorov-Smirnov p-value falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nFeature frequencies are treated as numeric.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -535,7 +535,7 @@
           "refId": "A"
         }
       ],
-      "title": "Chi-Squared p-value by Feature",
+      "title": "Kolmogorov-Smirnov p-value by Feature",
       "type": "timeseries"
     }
   ],

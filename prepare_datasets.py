@@ -55,8 +55,8 @@ def write_config_yaml(feature_names):
             target = "__target__",
             prediction = "__predicted__",
             datetime = "__date__",
-            numerical_features = [],
-            categorical_features = feature_names
+            numerical_features = feature_names,
+            categorical_features = []
         ),
         pretty_print = True,
         service = dict(
