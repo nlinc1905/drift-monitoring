@@ -50,4 +50,4 @@ if __name__ == '__main__':
         )
 
         # pause a bit to simulate a non-constant data stream
-        time.sleep(10)
+        time.sleep(3)

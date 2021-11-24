@@ -1,17 +1,17 @@
 column_mapping:
-  categorical_features:
-  - _tethers
-  - architectures
-  - downey
-  - educated
-  - esoteric
-  - fervent
-  - prohibiting
-  - spectral
-  - texting
-  - waarnemer
+  categorical_features: []
   datetime: __date__
-  numerical_features: []
+  numerical_features:
+  - asked
+  - development
+  - different
+  - doubt
+  - mind
+  - power
+  - read
+  - sense
+  - source
+  - statement
   prediction: __predicted__
   target: __target__
 data_format:
