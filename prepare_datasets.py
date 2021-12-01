@@ -2,6 +2,7 @@ import argparse
 import logging
 import random
 import pickle
+import warnings
 import pandas as pd
 import numpy as np
 from ruamel import yaml
@@ -90,12 +91,12 @@ def create_bins_of_client_ids(df_len, nbr_clients=1):
     return [i for j in [bin_sizes[b]*[b] for b in range(len(bin_sizes))] for i in j]
 
 
-def prepare_reference_dataset(drift_test_type=None):
+def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
     """
     Prepares a selection of news articles as the reference dataset (a.k.k. the training dataset, as
     the model is trained on this data).
 
-    :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift]
+    :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift] or None
         for data drift test (alter the features only, leave labels alone):
           train features on space data, train model on mixed data
           test on hockey data (model assumes the labels are still for space/religion)
@@ -105,7 +106,21 @@ def prepare_reference_dataset(drift_test_type=None):
         for concept drift test (alter both the features and labels):
           train features on space data, train model on mixed data
           test on religion data
+    :param nbr_clients: (int) used to test how the dashboard handles multiple models/clients.
+        This must be == 1 if drift_test_type is not None, or drift_test_type will be coerced to None.
     """
+    if drift_test_type is not None and nbr_clients != 1:
+        warnings.warn(
+            """
+            prepare_reference_dataset was called with drift_test_type not None and nbr_clients != 1.  
+            It is impossible to test a drift type and multiple clients at the same time, since client IDs 
+            are assigned arbitrarily for testing.  Therefore, the drift_test_type will be set to None 
+            for this run to avoid errors.  To test detection of a certain type of drift, please call 
+            the function with nbr_clients = 1.
+            """
+        )
+        drift_test_type = None
+
     train = fetch_20newsgroups(
         subset="train",
         categories=["sci.space", "soc.religion.christian"],
@@ -127,7 +142,7 @@ def prepare_reference_dataset(drift_test_type=None):
     train_data = [i for idx, i in enumerate(train.data) if idx in train_indices_to_keep]
     train_target = [i for idx, i in enumerate(train.target) if idx in train_indices_to_keep]
 
-    # apply filters determined by drift_test_type
+    # set up indices to apply the filters determined by drift_test_type
     space_indices = np.where(np.array(train_target)==0)[0].tolist()
 
     if drift_test_type is not None and (drift_test_type == "data_drift" or drift_test_type == "concept_drift"):
@@ -209,12 +224,12 @@ def prepare_reference_dataset(drift_test_type=None):
     write_config_yaml(feature_names=sampled_feature_names)
 
 
-def prepare_production_dataset(drift_test_type=None):
+def prepare_production_dataset(drift_test_type=None, nbr_clients=1):
     """
     Prepares a dataset to be used as the production data.  This data will be passed to the model API
     for predictions, and will be compared to the reference dataset for drift.
 
-    :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift]
+    :param drift_test_type: (str) can be 1 of [data_drift, prior_drift, concept_drift] or None
         for data drift test (alter the features only, leave labels alone):
           train features on space data, train model on mixed data
           test on hockey data (model assumes the labels are still for space/religion)
@@ -224,7 +239,21 @@ def prepare_production_dataset(drift_test_type=None):
         for concept drift test (alter both the features and labels):
           train features on space data, train model on mixed data
           test on religion data
+    :param nbr_clients: (int) used to test how the dashboard handles multiple models/clients.
+        This must be == 1 if drift_test_type is not None, or drift_test_type will be coerced to None.
     """
+    if drift_test_type is not None and nbr_clients != 1:
+        warnings.warn(
+            """
+            prepare_production_dataset was called with drift_test_type not None and nbr_clients != 1.  
+            It is impossible to test a drift type and multiple clients at the same time, since client IDs 
+            are assigned arbitrarily for testing.  Therefore, the drift_test_type will be set to None 
+            for this run to avoid errors.  To test detection of a certain type of drift, please call 
+            the function with nbr_clients = 1.
+            """
+        )
+        drift_test_type = None
+
     if drift_test_type is not None and drift_test_type == "data_drift":
         categories = ["rec.sport.hockey"]
     elif drift_test_type is not None and drift_test_type == "prior_drift":
@@ -256,7 +285,7 @@ def prepare_production_dataset(drift_test_type=None):
     # test_df should contain the fields to be sent to the API
     # create arbitrary client IDs for testing the dashboard's ability to handle many models
     test_df = pd.DataFrame({
-        "client_id": create_bins_of_client_ids(df_len=len(test_target), nbr_clients=1),
+        "client_id": create_bins_of_client_ids(df_len=len(test_target), nbr_clients=nbr_clients),
         "body": test_data,
         "target": test_target,
     })
