@@ -74,6 +74,22 @@ def write_config_yaml(feature_names):
         yaml.dump(output, outfile, default_flow_style=False)
 
 
+def create_bins_of_client_ids(df_len, nbr_clients=1):
+    """
+    Simulates records coming from different clients/models.  There is 1 model per client.
+    This function creates a list of nbr_clients bins, where each bin is as close as equally sized
+    as possible, such the list's length == df_len.
+
+    :param df_len: (int) number of rows in the test dataset
+    :param nbr_clients: (int) the number of distinct model IDs to generate (there is
+        1 model per client), a.k.a. the number of bins
+
+    :return: list of client IDs
+    """
+    bin_sizes = np.arange(df_len + nbr_clients - 1, df_len - 1, -1) // nbr_clients
+    return [i for j in [bin_sizes[b]*[b] for b in range(len(bin_sizes))] for i in j]
+
+
 def prepare_reference_dataset(drift_test_type=None):
     """
     Prepares a selection of news articles as the reference dataset (a.k.k. the training dataset, as
@@ -238,8 +254,9 @@ def prepare_production_dataset(drift_test_type=None):
         test_target = test.target
 
     # test_df should contain the fields to be sent to the API
+    # create arbitrary client IDs for testing the dashboard's ability to handle many models
     test_df = pd.DataFrame({
-        "client_id": [1] * len(test_target),  # dummy
+        "client_id": create_bins_of_client_ids(df_len=len(test_target), nbr_clients=1),
         "body": test_data,
         "target": test_target,
     })
