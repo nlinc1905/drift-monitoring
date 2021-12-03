@@ -23,19 +23,18 @@ def get_preds_from_model(json_data):
 
     :return: prediction as JSON object
     """
-    # retrieve the model artifacts
-    # do this here in the function bc the articles could vary by model in the future
-    with open("data/artifacts/data_processor_1.pkl", "rb") as pfile:
-        bow_model = pickle.load(pfile)
-    with open("data/artifacts/model_1.pkl", "rb") as pfile:
-        model = pickle.load(pfile)
-    with open("data/artifacts/sampled_features_1.pkl", "rb") as pfile:
-        sampled_features = pickle.load(pfile)
-    with open("data/artifacts/sampled_feature_names_1.pkl", "rb") as pfile:
-        sampled_feature_names = pickle.load(pfile)
-
     # convert JSON data to dict
-    payload_dict = {k:[v] for k,v in jsonable_encoder(json_data).items()}
+    payload_dict = {k: [v] for k, v in jsonable_encoder(json_data).items()}
+
+    # retrieve the model artifacts, client_id determines which model to use
+    with open(f"data/artifacts/data_processor_{payload_dict['client_id']}.pkl", "rb") as pfile:
+        bow_model = pickle.load(pfile)
+    with open(f"data/artifacts/model_{payload_dict['client_id']}.pkl", "rb") as pfile:
+        model = pickle.load(pfile)
+    with open(f"data/artifacts/sampled_features_{payload_dict['client_id']}.pkl", "rb") as pfile:
+        sampled_features = pickle.load(pfile)
+    with open(f"data/artifacts/sampled_feature_names_{payload_dict['client_id']}.pkl", "rb") as pfile:
+        sampled_feature_names = pickle.load(pfile)
 
     # transform the test data and make predictions
     test_vect = bow_model.transform(payload_dict["body"])
@@ -50,6 +49,7 @@ def get_preds_from_model(json_data):
     test_df["__target__"] = payload_dict["target"]
     test_df["__predicted__"] = test_preds
     test_df["__date__"] = datetime.today()
+    test_df["__client_id__"] = payload_dict["client_id"]
 
     return test_df.to_json(orient="index")
 
