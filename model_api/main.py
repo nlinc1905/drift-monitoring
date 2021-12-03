@@ -25,13 +25,13 @@ def get_preds_from_model(json_data):
     """
     # retrieve the model artifacts
     # do this here in the function bc the articles could vary by model in the future
-    with open("data/artifacts/data_processor.pkl", "rb") as pfile:
+    with open("data/artifacts/data_processor_1.pkl", "rb") as pfile:
         bow_model = pickle.load(pfile)
-    with open("data/artifacts/model.pkl", "rb") as pfile:
+    with open("data/artifacts/model_1.pkl", "rb") as pfile:
         model = pickle.load(pfile)
-    with open("data/artifacts/sampled_features.pkl", "rb") as pfile:
+    with open("data/artifacts/sampled_features_1.pkl", "rb") as pfile:
         sampled_features = pickle.load(pfile)
-    with open("data/artifacts/sampled_feature_names.pkl", "rb") as pfile:
+    with open("data/artifacts/sampled_feature_names_1.pkl", "rb") as pfile:
         sampled_feature_names = pickle.load(pfile)
 
     # convert JSON data to dict

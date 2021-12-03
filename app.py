@@ -1,4 +1,5 @@
 import hashlib
+import yaml
 
 import dataclasses
 import datetime
@@ -56,14 +57,15 @@ class MonitoringService:
         """
         Sets up a monitoring service that handles things like calculating rolling windows.
         The service is initialized as global variable monitoring_service, and receives options specified in your
-        config.yaml.  For example, if your window_size in config.yaml is 30, then 30 samples will be
-        yanked out of the end of your reference dataset to seed the 'current' data, upon initialization.
-        This ensures that there are enough samples to carry out statistical tests to compare distributions.
-        As a side effect, these rows will pollute the current dataset that you want to compare.
+        config/evidently_config.yaml.  For example, if your window_size in config/evidently_config.yaml is 30,
+        then 30 samples will be yanked out of the end of your reference dataset to seed the 'current' data,
+        upon initialization.  This ensures that there are enough samples to carry out statistical tests to
+        compare distributions.  As a side effect, these rows will pollute the current dataset that you want to compare.
 
-        :param reference: Defined in config.yaml, points to the reference dataset (CSV)
-        :param options: Defined in config.yaml
-        :param column_mapping: Defined in config.yaml, determines which tests to apply based on var type
+        :param reference: Defined in config/evidently_config.yaml, points to the reference dataset (CSV)
+        :param options: Defined in config/evidently_config.yaml
+        :param column_mapping: Defined in config/evidently_config.yaml, determines which tests to apply
+            based on var type
         """
         self.monitoring = model_monitoring.ModelMonitoring(monitors=[monitor_mapping[k] for k in options.monitors])
 
@@ -136,14 +138,12 @@ monitoring_service: Optional[MonitoringService] = None
 @app.before_first_request
 def configure_service():
     """
-    Initializes monitoring service with the configuration defined in config.yaml.
+    Initializes monitoring service with the configuration defined in config/evidently_config.yaml.
     The last 30 rows of the reference dataset become the current dataset used for comparison.
     New rows will be appended to this current dataset.
     """
-    import yaml
-
     global monitoring_service
-    with open("config.yaml", 'rb') as f:
+    with open("config/evidently_config_1.yaml", 'rb') as f:
         config = yaml.safe_load(f)
     loader = DataLoader()
     app.logger.info(f"config: {config}")

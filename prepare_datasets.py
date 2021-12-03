@@ -38,13 +38,15 @@ def train_bow_model(text_input, sklearn_vectorizer):
     return vectorizer
 
 
-def write_config_yaml(feature_names):
+def write_config_yaml(feature_names, filename_suffix=None):
     """
-    The config.yaml file requires specifying variable names, but since we are randomly sampling
+    The config/evidently_config.yaml file requires specifying variable names, but since we are randomly sampling
     which features to use, they will not be known in advance.  Therefore, we generate a new
-    yaml file here and overwrite the existing config.yaml
+    yaml file here and overwrite the existing config/evidently_config.yaml
 
     :feature_names: (list of strings) names of the features, or the words for a BoW model
+    :filename_suffix: (str) optional string to append to the config file name, such as when there
+        is 1 config per model/client
     """
     output = dict(
         data_format = dict(
@@ -61,7 +63,7 @@ def write_config_yaml(feature_names):
         ),
         pretty_print = True,
         service = dict(
-            reference_path = "data/reference.csv",
+            reference_path = f"data/reference{filename_suffix or '_1'}.csv",
             min_reference_size = 30,
             use_reference = True,
             moving_reference = False,
@@ -71,7 +73,7 @@ def write_config_yaml(feature_names):
         ),
     )
 
-    with open('config.yaml', 'w') as outfile:
+    with open(f"config/evidently_config{filename_suffix or '_1'}.yaml", "w") as outfile:
         yaml.dump(output, outfile, default_flow_style=False)
 
 
@@ -88,7 +90,7 @@ def create_bins_of_client_ids(df_len, nbr_clients=1):
     :return: list of client IDs
     """
     bin_sizes = np.arange(df_len + nbr_clients - 1, df_len - 1, -1) // nbr_clients
-    return [i for j in [bin_sizes[b]*[b] for b in range(len(bin_sizes))] for i in j]
+    return [i+1 for j in [bin_sizes[b]*[b] for b in range(len(bin_sizes))] for i in j]
 
 
 def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
@@ -110,15 +112,15 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
         This must be == 1 if drift_test_type is not None, or drift_test_type will be coerced to None.
     """
     if drift_test_type is not None and nbr_clients != 1:
-        warnings.warn(
-            """
-            prepare_reference_dataset was called with drift_test_type not None and nbr_clients != 1.  
-            It is impossible to test a drift type and multiple clients at the same time, since client IDs 
-            are assigned arbitrarily for testing.  Therefore, the drift_test_type will be set to None 
-            for this run to avoid errors.  To test detection of a certain type of drift, please call 
-            the function with nbr_clients = 1.
-            """
-        )
+        warnings.warn(''.join(
+            (
+                "prepare_production_dataset was called with drift_test_type not None and nbr_clients != 1.  ",
+                "It is impossible to test a drift type and multiple clients at the same time, since client IDs ",
+                "are assigned arbitrarily for testing.  Therefore, the drift_test_type will be set to None ",
+                "for this run to avoid errors.  To test detection of a certain type of drift, please call ",
+                "the function with nbr_clients = 1."
+            )
+        ))
         drift_test_type = None
 
     train = fetch_20newsgroups(
@@ -143,7 +145,7 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
     train_target = [i for idx, i in enumerate(train.target) if idx in train_indices_to_keep]
 
     # set up indices to apply the filters determined by drift_test_type
-    space_indices = np.where(np.array(train_target)==0)[0].tolist()
+    space_indices = np.where(np.array(train_target) == 0)[0].tolist()
 
     if drift_test_type is not None and (drift_test_type == "data_drift" or drift_test_type == "concept_drift"):
         # train features for space (bow_model will train on train_data_filtered)
@@ -167,61 +169,113 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
         model.fit(train_vect, train_target)
         train_preds = model.predict(train_vect)
 
-    elif drift_test_type is None or (drift_test_type is not None and drift_test_type == "prior_drift"):
-        # train features for mixed (bow_model will train on train_data)
-        # train model on mixed (model will train on train_data, train_target)
+        # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
+        # save it to the artifacts folder so that it can be used to process new data
+        with open("data/artifacts/data_processor_1.pkl", "wb") as pfile:
+            pickle.dump(bow_model, pfile)
 
-        bow_model = train_bow_model(text_input=train_data, sklearn_vectorizer=CountVectorizer)
-        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
-        train_vect = bow_model.transform(train_data)
+        # save the trained model to artifacts, since it will be required to process new data
+        with open("data/artifacts/model_1.pkl", "wb") as pfile:
+            pickle.dump(model, pfile)
 
-        model = SVC(
-            C=1.0,
-            kernel='rbf',
-            gamma='scale',
-            # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
-            probability=False,  # set to True to enable predict_proba
-            tol=0.001,
-            random_state=SEED
+        # randomly sample from the features, and put everything together in a Pandas df for Evidently to read
+        nbr_features_to_sample = 10
+        sampled_features = random.sample([i for i in range(len(features))], k=nbr_features_to_sample)
+        sampled_feature_names = [f for f_idx, f in enumerate(features) if f_idx in sampled_features]
+
+        # save the sampled features as artifacts, so they can be used to sample the features for test data
+        with open("data/artifacts/sampled_features_1.pkl", "wb") as pfile:
+            pickle.dump(sampled_features, pfile)
+        with open("data/artifacts/sampled_feature_names_1.pkl", "wb") as pfile:
+            pickle.dump(sampled_feature_names, pfile)
+
+        train_df = pd.DataFrame(
+            train_vect[:, sampled_features].todense(),
+            columns=sampled_feature_names
         )
+        train_df["__target__"] = train_target
+        train_df["__predicted__"] = train_preds
+        train_df["__date__"] = datetime.today() - timedelta(days=1)
+        train_df["__client_id__"] = [1] * len(train_target)
 
-        model.fit(train_vect, train_target)
-        train_preds = model.predict(train_vect)
+        train_df.to_csv(f"data/reference_1.csv", index=False)
 
-    # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
-    # save it to the artifacts folder so that it can be used to process new data
-    with open("data/artifacts/data_processor.pkl", "wb") as pfile:
-        pickle.dump(bow_model, pfile)
+        logging.info(f"Reference dataset created with {train_df.shape[0]} rows for all (1) clients")
 
-    # save the trained model to artifacts, since it will be required to process new data
-    with open("data/artifacts/model.pkl", "wb") as pfile:
-        pickle.dump(model, pfile)
+        # overwrite config/evidently_config.yaml - there will only be 1 here
+        write_config_yaml(feature_names=sampled_feature_names, filename_suffix=None)
 
-    # randomly sample from the features, and put everything together in a Pandas df for Evidently to read
-    nbr_features_to_sample = 10
-    sampled_features = random.sample([i for i in range(len(features))], k=nbr_features_to_sample)
-    sampled_feature_names = [f for f_idx, f in enumerate(features) if f_idx in sampled_features]
+    elif drift_test_type is None or (drift_test_type is not None and drift_test_type == "prior_drift"):
+        # set up model/client IDs
+        client_ids = create_bins_of_client_ids(df_len=len(train_data), nbr_clients=nbr_clients)
 
-    # save the sampled features as artifacts, so they can be used to sample the features for test data
-    with open("data/artifacts/sampled_features.pkl", "wb") as pfile:
-        pickle.dump(sampled_features, pfile)
-    with open("data/artifacts/sampled_feature_names.pkl", "wb") as pfile:
-        pickle.dump(sampled_feature_names, pfile)
+        # fit a separate vectorizer & model for each client
+        for client in set(client_ids):
+            train_data_indices_for_client = [i for i, c in enumerate(client_ids) if c == client]
+            train_data_for_client = [
+                list_item for idx, list_item in enumerate(train_data)
+                if idx in train_data_indices_for_client
+            ]
+            train_target_for_client = [
+                list_item for idx, list_item in enumerate(train_target)
+                if idx in train_data_indices_for_client
+            ]
 
-    train_df = pd.DataFrame(
-        train_vect[:, sampled_features].todense(),
-        columns=sampled_feature_names
-    )
-    train_df["__target__"] = train_target
-    train_df["__predicted__"] = train_preds
-    train_df["__date__"] = datetime.today() - timedelta(days=1)
+            # train features for mixed (bow_model will train on train_data)
+            # train model on mixed (model will train on train_data, train_target)
 
-    train_df.to_csv("data/reference.csv", index=False)
+            bow_model = train_bow_model(text_input=train_data_for_client, sklearn_vectorizer=CountVectorizer)
+            features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+            train_vect = bow_model.transform(train_data_for_client)
 
-    logging.info(f"Reference dataset created with {train_df.shape[0]} rows")
+            model = SVC(
+                C=1.0,
+                kernel='rbf',
+                gamma='scale',
+                # if gamma='scale' (default) is passed then it uses 1 / (n_features * X.var()) as value of gamma
+                probability=False,  # set to True to enable predict_proba
+                tol=0.001,
+                random_state=SEED
+            )
 
-    # overwrite config.yaml
-    write_config_yaml(feature_names=sampled_feature_names)
+            model.fit(train_vect, train_target_for_client)
+            train_preds = model.predict(train_vect)
+
+            # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
+            # save it to the artifacts folder so that it can be used to process new data
+            with open(f"data/artifacts/data_processor_{client}.pkl", "wb") as pfile:
+                pickle.dump(bow_model, pfile)
+
+            # save the trained model to artifacts, since it will be required to process new data
+            with open(f"data/artifacts/model_{client}.pkl", "wb") as pfile:
+                pickle.dump(model, pfile)
+
+            # randomly sample from the features, and put everything together in a Pandas df for Evidently to read
+            nbr_features_to_sample = 10
+            sampled_features = random.sample([i for i in range(len(features))], k=nbr_features_to_sample)
+            sampled_feature_names = [f for f_idx, f in enumerate(features) if f_idx in sampled_features]
+
+            # save the sampled features as artifacts, so they can be used to sample the features for test data
+            with open(f"data/artifacts/sampled_features_{client}.pkl", "wb") as pfile:
+                pickle.dump(sampled_features, pfile)
+            with open(f"data/artifacts/sampled_feature_names_{client}.pkl", "wb") as pfile:
+                pickle.dump(sampled_feature_names, pfile)
+
+            train_df = pd.DataFrame(
+                train_vect[:, sampled_features].todense(),
+                columns=sampled_feature_names
+            )
+            train_df["__target__"] = train_target_for_client
+            train_df["__predicted__"] = train_preds
+            train_df["__date__"] = datetime.today() - timedelta(days=1)
+            train_df["__client_id__"] = [client] * len(train_target_for_client)
+
+            train_df.to_csv(f"data/reference_{client}.csv", index=False)
+
+            logging.info(f"Reference dataset created with {train_df.shape[0]} rows for client {client}")
+
+            # overwrite config/evidently_config.yaml - there will be 1 per client (and 1 per evidently MonitoringService)
+            write_config_yaml(feature_names=sampled_feature_names, filename_suffix=f"_{client}")
 
 
 def prepare_production_dataset(drift_test_type=None, nbr_clients=1):
@@ -243,15 +297,15 @@ def prepare_production_dataset(drift_test_type=None, nbr_clients=1):
         This must be == 1 if drift_test_type is not None, or drift_test_type will be coerced to None.
     """
     if drift_test_type is not None and nbr_clients != 1:
-        warnings.warn(
-            """
-            prepare_production_dataset was called with drift_test_type not None and nbr_clients != 1.  
-            It is impossible to test a drift type and multiple clients at the same time, since client IDs 
-            are assigned arbitrarily for testing.  Therefore, the drift_test_type will be set to None 
-            for this run to avoid errors.  To test detection of a certain type of drift, please call 
-            the function with nbr_clients = 1.
-            """
-        )
+        warnings.warn(''.join(
+            (
+                "prepare_production_dataset was called with drift_test_type not None and nbr_clients != 1.  ",
+                "It is impossible to test a drift type and multiple clients at the same time, since client IDs ",
+                "are assigned arbitrarily for testing.  Therefore, the drift_test_type will be set to None ",
+                "for this run to avoid errors.  To test detection of a certain type of drift, please call ",
+                "the function with nbr_clients = 1."
+            )
+        ))
         drift_test_type = None
 
     if drift_test_type is not None and drift_test_type == "data_drift":
@@ -303,7 +357,14 @@ if __name__ == '__main__':
         help='Enter 1 of [data_drift, prior_drift, concept_drift].  If none specified, defaults to None',
         required=False
     )
+    parser.add_argument(
+        '-nc', '--nbr_clients',
+        type=int,
+        default=1,
+        help='The number of clients or models to test.',
+        required=False
+    )
     args = vars(parser.parse_args())
 
-    prepare_reference_dataset(drift_test_type=args['drift_test_type'])
-    prepare_production_dataset(drift_test_type=args['drift_test_type'])
+    prepare_reference_dataset(drift_test_type=args['drift_test_type'], nbr_clients=args['nbr_clients'])
+    prepare_production_dataset(drift_test_type=args['drift_test_type'], nbr_clients=args['nbr_clients'])
