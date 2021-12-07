@@ -59,3 +59,13 @@ services:
       - "8000:8000"
     networks:
       - back-tier
+
+#  drift_monitoring_api:
+#    build: .
+#    command: python3 -m uvicorn monitoring_api:app --host 0.0.0.0
+#    volumes:
+#      - .:/app
+#    ports:
+#      - "8001:8001"
+#    networks:
+#      - back-tier

@@ -13,6 +13,8 @@ from sklearn.svm import SVC
 from datetime import datetime, timedelta
 
 
+DATA_DIR = "./data/"
+ARTIFACTS_DIR = DATA_DIR + "artifacts/"
 SEED = 14
 random.seed(SEED)
 logging.basicConfig(level=logging.INFO)
@@ -52,18 +54,18 @@ def write_config_yaml(feature_names, filename_suffix=None):
         data_format = dict(
             separator = ",",
             header = True,
-            date_column = "__date__",
+            date_column = "date_",
         ),
         column_mapping = dict(
-            target = "__target__",
-            prediction = "__predicted__",
-            datetime = "__date__",
+            target = "target_",
+            prediction = "predicted_",
+            datetime = "date_",
             numerical_features = feature_names,
             categorical_features = []
         ),
         pretty_print = True,
         service = dict(
-            reference_path = f"data/reference{filename_suffix or '_1'}.csv",
+            reference_path = f"{DATA_DIR}reference{filename_suffix or '_1'}.csv",
             min_reference_size = 30,
             use_reference = True,
             moving_reference = False,
@@ -73,7 +75,7 @@ def write_config_yaml(feature_names, filename_suffix=None):
         ),
     )
 
-    with open(f"config/monitoring_services/evidently_config{filename_suffix or '_1'}.yaml", "w") as outfile:
+    with open(f"./config/monitoring/monitoring_config{filename_suffix or '_1'}.yaml", "w") as outfile:
         yaml.dump(output, outfile, default_flow_style=False)
 
 
@@ -171,11 +173,11 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
 
         # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
         # save it to the artifacts folder so that it can be used to process new data
-        with open("data/artifacts/data_processor_1.pkl", "wb") as pfile:
+        with open(f"{ARTIFACTS_DIR}data_processor_1.pkl", "wb") as pfile:
             pickle.dump(bow_model, pfile)
 
         # save the trained model to artifacts, since it will be required to process new data
-        with open("data/artifacts/model_1.pkl", "wb") as pfile:
+        with open(f"{ARTIFACTS_DIR}model_1.pkl", "wb") as pfile:
             pickle.dump(model, pfile)
 
         # randomly sample from the features, and put everything together in a Pandas df for Evidently to read
@@ -184,21 +186,21 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
         sampled_feature_names = [f for f_idx, f in enumerate(features) if f_idx in sampled_features]
 
         # save the sampled features as artifacts, so they can be used to sample the features for test data
-        with open("data/artifacts/sampled_features_1.pkl", "wb") as pfile:
+        with open(f"{ARTIFACTS_DIR}sampled_features_1.pkl", "wb") as pfile:
             pickle.dump(sampled_features, pfile)
-        with open("data/artifacts/sampled_feature_names_1.pkl", "wb") as pfile:
+        with open(f"{ARTIFACTS_DIR}sampled_feature_names_1.pkl", "wb") as pfile:
             pickle.dump(sampled_feature_names, pfile)
 
         train_df = pd.DataFrame(
             train_vect[:, sampled_features].todense(),
             columns=sampled_feature_names
         )
-        train_df["__target__"] = train_target
-        train_df["__predicted__"] = train_preds
-        train_df["__date__"] = datetime.today() - timedelta(days=1)
-        train_df["__client_id__"] = [1] * len(train_target)
+        train_df["target_"] = train_target
+        train_df["predicted_"] = train_preds
+        train_df["date_"] = datetime.today() - timedelta(days=1)
+        train_df["client_id_"] = [1] * len(train_target)
 
-        train_df.to_csv(f"data/reference_1.csv", index=False)
+        train_df.to_csv(f"{DATA_DIR}reference_1.csv", index=False)
 
         logging.info(f"Reference dataset created with {train_df.shape[0]} rows for all (1) clients")
 
@@ -243,11 +245,11 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
 
             # bow_model (the vectorizer) is essentially the entire feature engineering pipeline
             # save it to the artifacts folder so that it can be used to process new data
-            with open(f"data/artifacts/data_processor_{client}.pkl", "wb") as pfile:
+            with open(f"{ARTIFACTS_DIR}data_processor_{client}.pkl", "wb") as pfile:
                 pickle.dump(bow_model, pfile)
 
             # save the trained model to artifacts, since it will be required to process new data
-            with open(f"data/artifacts/model_{client}.pkl", "wb") as pfile:
+            with open(f"{ARTIFACTS_DIR}model_{client}.pkl", "wb") as pfile:
                 pickle.dump(model, pfile)
 
             # randomly sample from the features, and put everything together in a Pandas df for Evidently to read
@@ -256,25 +258,25 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
             sampled_feature_names = [f for f_idx, f in enumerate(features) if f_idx in sampled_features]
 
             # save the sampled features as artifacts, so they can be used to sample the features for test data
-            with open(f"data/artifacts/sampled_features_{client}.pkl", "wb") as pfile:
+            with open(f"{ARTIFACTS_DIR}sampled_features_{client}.pkl", "wb") as pfile:
                 pickle.dump(sampled_features, pfile)
-            with open(f"data/artifacts/sampled_feature_names_{client}.pkl", "wb") as pfile:
+            with open(f"{ARTIFACTS_DIR}sampled_feature_names_{client}.pkl", "wb") as pfile:
                 pickle.dump(sampled_feature_names, pfile)
 
             train_df = pd.DataFrame(
                 train_vect[:, sampled_features].todense(),
                 columns=sampled_feature_names
             )
-            train_df["__target__"] = train_target_for_client
-            train_df["__predicted__"] = train_preds
-            train_df["__date__"] = datetime.today() - timedelta(days=1)
-            train_df["__client_id__"] = [client] * len(train_target_for_client)
+            train_df["target_"] = train_target_for_client
+            train_df["predicted_"] = train_preds
+            train_df["date_"] = datetime.today() - timedelta(days=1)
+            train_df["client_id_"] = [client] * len(train_target_for_client)
 
-            train_df.to_csv(f"data/reference_{client}.csv", index=False)
+            train_df.to_csv(f"{DATA_DIR}reference_{client}.csv", index=False)
 
             logging.info(f"Reference dataset created with {train_df.shape[0]} rows for client {client}")
 
-            # overwrite config/evidently_config.yaml - there will be 1 per client (and 1 per evidently MonitoringService)
+            # overwrite config/monitoring_config.yaml - there will be 1 per client (and 1 per MonitoringService)
             write_config_yaml(feature_names=sampled_feature_names, filename_suffix=f"_{client}")
 
 
@@ -344,7 +346,7 @@ def prepare_production_dataset(drift_test_type=None, nbr_clients=1):
         "target": test_target,
     })
 
-    test_df.to_csv("data/production.csv", index=False)
+    test_df.to_csv(f"{DATA_DIR}production.csv", index=False)
 
     logging.info(f"Production dataset created with {test_df.shape[0]} rows")
 

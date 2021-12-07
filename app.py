@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 import flask
 import pandas
+from os import walk
 from evidently import model_monitoring
 from evidently.model_monitoring import (
     DataDriftMonitor,
@@ -51,6 +52,7 @@ class MonitoringService:
     last_run: Optional[datetime.datetime]
 
     def __init__(self,
+                 service_id: int,
                  reference: pandas.DataFrame,
                  options: MonitoringServiceOptions,
                  column_mapping: dict = None):
@@ -62,11 +64,13 @@ class MonitoringService:
         upon initialization.  This ensures that there are enough samples to carry out statistical tests to
         compare distributions.  As a side effect, these rows will pollute the current dataset that you want to compare.
 
+        :param service_id: The client ID/model ID to be monitored.
         :param reference: Defined in config/evidently_config.yaml, points to the reference dataset (CSV)
         :param options: Defined in config/evidently_config.yaml
         :param column_mapping: Defined in config/evidently_config.yaml, determines which tests to apply
             based on var type
         """
+        self.service_id = service_id
         self.monitoring = model_monitoring.ModelMonitoring(monitors=[monitor_mapping[k] for k in options.monitors])
 
         if options.use_reference:
@@ -121,7 +125,7 @@ class MonitoringService:
         self.monitoring.execute(self.reference, self.current, self.column_mapping)
         self.hash_metric.labels(hash=self.hash).set(1)
         for metric, value, labels in self.monitoring.metrics():
-            metric_key = f"evidently:{metric.name}"
+            metric_key = f"evidently:{metric.name + '_' + self.service_id}"
             found = self.metrics.get(metric_key)
             if not found:
                 found = Gauge(metric_key, "", () if labels is None else list(sorted(labels.keys())))
@@ -132,7 +136,8 @@ class MonitoringService:
                 found.labels(**labels).set(value)
 
 
-monitoring_service: Optional[MonitoringService] = None
+# monitoring_service: Optional[MonitoringService] = None
+monitoring_service_dict = {}
 
 
 @app.before_first_request
@@ -142,19 +147,31 @@ def configure_service():
     The last 30 rows of the reference dataset become the current dataset used for comparison.
     New rows will be appended to this current dataset.
     """
-    global monitoring_service
-    with open("config/evidently_config_1.yaml", 'rb') as f:
-        config = yaml.safe_load(f)
-    loader = DataLoader()
-    app.logger.info(f"config: {config}")
-    options = MonitoringServiceOptions(**config['service'])
-
-    reference_data = loader.load(options.reference_path,
-                                 DataOptions(date_column=config['data_format']['date_column'],
-                                             separator=config['data_format']['separator'],
-                                             header=config['data_format']['header']))
-    app.logger.info(f"reference dataset loaded: {len(reference_data)} rows")
-    monitoring_service = MonitoringService(reference_data, options=options, column_mapping=config['column_mapping'])
+    config_files = next(walk("config/monitoring_services/"), (None, None, []))[2]
+    # loop over the config files, since there is 1 file per client/model
+    for cf in config_files:
+        client_id = cf.split("_")[-1].split(".")[0]
+        with open(f"config/monitoring_services/{cf}", 'rb') as f:
+            config = yaml.safe_load(f)
+        loader = DataLoader()
+        app.logger.info(f"config: {config}")
+        options = MonitoringServiceOptions(**config['service'])
+        reference_data = loader.load(
+            options.reference_path,
+            DataOptions(
+                date_column=config['data_format']['date_column'],
+                separator=config['data_format']['separator'],
+                header=config['data_format']['header']
+            )
+        )
+        app.logger.info(f"reference dataset loaded: {len(reference_data)} rows")
+        monitoring_service = MonitoringService(
+            service_id=client_id,
+            reference=reference_data,
+            options=options,
+            column_mapping=config['column_mapping']
+        )
+        monitoring_service_dict[client_id] = monitoring_service
 
 
 @app.route('/iterate', methods=["POST"])
@@ -166,9 +183,10 @@ def iterate():
     :return: 'ok' if the request is successful and new rows are appended to current
     """
     item = flask.request.json
-    if monitoring_service is None:
+    request_data = pandas.DataFrame.from_dict(item)
+    if monitoring_service_dict is None or len(monitoring_service_dict) == 0:
         return 500, "Internal Server Error: service not found"
-    monitoring_service.iterate(new_rows=pandas.DataFrame.from_dict(item))
+    monitoring_service_dict[request_data['__client_id__'].iloc[0]].iterate(new_rows=request_data)
     return "ok"
 
 

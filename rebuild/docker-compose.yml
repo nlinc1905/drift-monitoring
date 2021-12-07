@@ -1,0 +1,33 @@
+version: '3.7'
+
+volumes:
+    prometheus_data: {}
+
+networks:
+  front-tier:
+  back-tier:
+
+services:
+  drift_monitoring_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    networks:
+      - back-tier
+      - front-tier
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - 9090:9090
+    networks:
+      - back-tier
+    restart: always
