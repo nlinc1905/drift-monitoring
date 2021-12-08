@@ -103,7 +103,9 @@ The header is added to the `/iterate` endpoint.
 
 Next, define your new metric in `metrics_instrumenation.py`.  You can copy the model_metric function that is there now 
 to get started.  Just replace the METRIC with whatever you want.  Note that there are 
-[4 types of metrics](https://prometheus.io/docs/concepts/metric_types/) that Prometheus can track.  
+[4 types of metrics](https://prometheus.io/docs/concepts/metric_types/) that Prometheus can track.  See how to create 
+them with the Python Prometheus client here: 
+[https://github.com/prometheus/client_python#instrumenting](https://github.com/prometheus/client_python#instrumenting).
 
 Finally, add your metric to the instrumentator.  Here is an example for adding the predicted metric:
 <br/>
