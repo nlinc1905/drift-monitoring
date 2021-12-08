@@ -1,10 +1,16 @@
 FROM python:3.8-slim-buster
 
+# Install Linux dependencies, vim only for helping with development
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y vim
+
 COPY . /app
 WORKDIR /app
 
-# Set environment variables
+# Set environment variables, remove PYTHONUNBUFFERED after development finished
 ENV PROMETHEUS_METRICS_NAMESPACE=drift_monitoring_api
+ENV PYTHONUNBUFFERED=1
 
 # Install Python library dependencies
 RUN python3 -m pip install --user --upgrade pip && \

@@ -2,11 +2,13 @@ import pandas as pd
 from fastapi import FastAPI, Response
 from fastapi.encoders import jsonable_encoder
 from pydantic import create_model
-from prometheus_fastapi_instrumentator import Instrumentator
-from prometheus_client import Counter
-from os import walk
+from os import walk, path
+from ruamel import yaml
 
 from metrics_instrumentation import instrumentator
+
+
+DATA_DIR = "data/"
 
 
 # create a dynamic model with optional fields, bc each sample word will vary by client_id
@@ -34,42 +36,46 @@ DynamicDataModel = create_model(
 config_files = next(walk("config/monitoring"), (None, None, []))[2]
 
 
-def create_config_if_not_exist():
+def create_config(feature_names, filename_suffix=None):
     """
-    For an incoming request, check if there is a config.yml file for the client_id
-    in config/monitoring.  If there is, do nothing.  If there is not, create one.
-    """
-    # TODO: find out what the request will look like by running example_run_request, then finish this
-    pass
+    Create a new config file for the client_id in config/monitoring.
 
-
-def create_metrics_for_new_config():
+    :feature_names: (list of strings) names of the features, or the words for a BoW model
+    :filename_suffix: (str) optional string to append to the config file name, such as when there
+        is 1 config per model/client
     """
-    When a new config is created, it needs metrics.  This function sets up metrics for the
-    new config and appends them to the existing set of metrics.  This function will only run
-    if a new config.yml is created.
-    """
-    new_metric = Counter(
-        'request_count', 'Request Count for Client ID',
-        ['app_name', 'method', 'endpoint', 'http_status']
+    # TODO: update this after seeing what prod will look like
+    output = dict(
+        data_format=dict(
+            separator=",",
+            header=True,
+            date_column="date_",
+        ),
+        column_mapping=dict(
+            target="target_",
+            prediction="predicted_",
+            datetime="date_",
+            numerical_features=feature_names,
+            categorical_features=[]
+        ),
+        pretty_print=True,
+        service=dict(
+            reference_path=f"{DATA_DIR}reference{filename_suffix or '_1'}.csv",
+            min_reference_size=30,
+            use_reference=True,
+            moving_reference=False,
+            window_size=30,
+            calculation_period_sec=10,
+            monitors=["data_drift", "concept_drift", "regression_performance"],
+        ),
     )
-    return new_metric
 
-
-def update_metric(metric):
-    """
-    pass
-    :return:
-    """
-    metric.labels(
-        'test_app', 'my_method', 'my_path', 200,  # request.method, request.path, response.status_code
-    ).inc()
+    with open(f"config/monitoring/monitoring_config{filename_suffix or '_1'}.yaml", "w") as outfile:
+        yaml.dump(output, outfile, default_flow_style=False)
 
 
 app = FastAPI()
-# Instrumentator().instrument(app).expose(app)
 instrumentator.instrument(app).expose(app)
-
 
 # start app with: uvicorn monitoring_api:app --reload
 # to view the app: http://localhost:8000
@@ -90,6 +96,17 @@ async def iterate(response: Response, dynamicdatamodel: DynamicDataModel):
     """
     request_data = jsonable_encoder(dynamicdatamodel)
     request_data_df = pd.DataFrame(request_data, index=[0])
+
+    # create a new config file if the client_id has never been seen before
+    client_id = str(request_data_df["client_id_"][0])
+    if not path.exists(f"config/monitoring/monitoring_config{('_' + client_id) or '_1'}.yaml"):
+        create_config(
+            feature_names=[
+                c for c in request_data_df.columns
+                if c not in ["client_id_", "target_", "predicted_", "date_"]
+            ],
+            filename_suffix=('_' + client_id)
+        )
 
     # save the desired metrics to be tracked for each model to the response headers
     # the instrumentator in metrics_instrumentation.py will read from these headers

@@ -31,3 +31,14 @@ services:
     networks:
       - back-tier
     restart: always
+
+  # this service is only for testing and development, as CisionAI will replace the model_api in prod
+  model_api:
+    build: .
+    command: python3 -m uvicorn model_api.main:app --host 0.0.0.0
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - back-tier

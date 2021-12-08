@@ -15,3 +15,9 @@ packages the model as a scikit-learn pipeline, meaning the model and its feature
 This API's swagger documentation can be found by going to [localhost:8000/docs](localhost:8000/docs) after the service 
 is up and running.  To get it up and running, run `docker-compose up`.  The swagger documentation shows example 
 requests and responses.
+
+You can also get this API up and running by itself, just to test the example requests shown in the Swagger 
+documentation.  To do that, you can `cd model_api` and run `uvicorn main:app --reload`.  Note that if you do this, you 
+will need to update the ARTIFACTS_DIR in main.py first, since it is a relative path that is written to run from the 
+root directory.  Change it to: `ARTIFACTS_DIR = "../data/artifacts/"`.  Running the API by itself might be useful for 
+testing quick changes while developing.
