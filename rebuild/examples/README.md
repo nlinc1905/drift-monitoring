@@ -1,3 +1,0 @@
-# Examples
-
-To run the examples in this directory...

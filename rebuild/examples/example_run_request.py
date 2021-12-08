@@ -41,13 +41,11 @@ if __name__ == '__main__':
         model_api_response_df = pd.read_json(json.loads(model_api_response.text), orient="index")
         data = model_api_response_df.to_dict(orient="records")
         # TODO: this API response will have to be updated to whatever comes from CisionAI
-        print(data)
-        print(json.dumps(data, cls=NumpyEncoder))
 
         # now send the model API's response to the drift monitoring service API
         requests.post(
             'http://localhost:5000/iterate',
-            data=json.dumps(data, cls=NumpyEncoder),
+            data=json.dumps(data[0], cls=NumpyEncoder),
             headers={"content-type": "application/json"}
         )
 
