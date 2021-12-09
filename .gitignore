@@ -131,3 +131,7 @@ dmypy.json
 # Data files
 *.csv
 *.pkl
+
+# Misc
+.DS_Store
+.idea
