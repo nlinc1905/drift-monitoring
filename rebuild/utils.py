@@ -2,6 +2,8 @@ import os
 import pandas as pd
 from ruamel import yaml
 
+from stat_tests import ks_test, chi_square_test
+
 
 DATA_DIR = "data/"
 
@@ -94,7 +96,22 @@ class Monitor:
         # reset the index, effectively shifting the oldest to the left
         self.current_data.reset_index(drop=True, inplace=True)
 
-        # perform statistical analysis
+        # hypothesis test for target
+        target_chi_square_p_value = chi_square_test(
+            reference_data=self.reference_data['target_'],
+            current_data=self.current_data['target'],
+            resample=True
+        )
+
+        # hypothesis test for predictions
+        predicted_chi_square_p_value = chi_square_test(
+            reference_data=self.reference_data['predicted_'],
+            current_data=self.current_data['predicted'],
+            resample=True
+        )
+        breakpoint()
+
+        # hypothesis test for features
 
 
 m = Monitor(client_id="1", reference_data=None)
