@@ -10,6 +10,7 @@ WORKDIR /app
 
 # Set environment variables, remove PYTHONUNBUFFERED after development finished
 ENV PROMETHEUS_METRICS_NAMESPACE=drift_monitoring_api
+ENV RESAMPLE_FOR_HYPOTHESIS_TEST=True
 ENV PYTHONUNBUFFERED=1
 
 # Install Python library dependencies

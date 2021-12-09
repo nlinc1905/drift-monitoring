@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from scipy.stats import ks_2samp, chisquare
 
 
@@ -87,4 +88,7 @@ def chi_square_test(reference_data: pd.DataFrame, current_data: pd.DataFrame, re
 
     expected_freq = [value[1] for value in sorted(ref_feature_dict.items())]
     observed_freq = [value[1] for value in sorted(current_feature_dict.items())]
-    return chisquare(expected_freq, observed_freq)[1]
+    p_value = chisquare(expected_freq, observed_freq)[1]
+    # TODO: find a better way to handle these
+    p_value = 0.0 if (np.isnan(p_value) or np.isinf(p_value)) else p_value
+    return p_value

@@ -2,16 +2,16 @@ column_mapping:
   categorical_features: []
   datetime: date_
   numerical_features:
-  - ask
-  - called
-  - host
-  - idea
-  - john
-  - life
-  - little
-  - really
-  - research
-  - think
+  - church
+  - god
+  - help
+  - high
+  - let
+  - mail
+  - make
+  - need
+  - net
+  - way
   prediction: predicted_
   target: target_
 data_format:
@@ -27,6 +27,6 @@ service:
   - concept_drift
   - regression_performance
   moving_reference: false
-  reference_path: ./data/reference_1.csv
+  reference_path: ./data/reference_2.csv
   use_reference: true
   window_size: 30

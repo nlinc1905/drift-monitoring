@@ -5,7 +5,10 @@ from pydantic import create_model
 from os import path
 
 from metrics_instrumentation import instrumentator
-from utils import create_config
+from utils import create_config, Monitor
+
+
+MONITOR_TRACKER = {}
 
 
 # create a dynamic Pydantic model with optional fields, bc each sample word will vary by client_id
@@ -63,16 +66,23 @@ async def iterate(response: Response, dynamicdatamodel: DynamicDataModel):
             filename_suffix=('_' + client_id)
         )
 
-    # save the desired metrics to be tracked for each model to the response headers
-    # the instrumentator in metrics_instrumentation.py will read from these headers
-    response.headers["X-target"] = str(request_data_df["target_"][0])
-    response.headers["X-predicted"] = str(request_data_df["predicted_"][0])
-    response.headers["X-client_id"] = str(request_data_df["client_id_"][0])
-    # sampled_features = [
-    #     c for c in request_data_df.columns
-    #     if c not in ["target_", "predicted_", "client_id_", "date_"]
-    # ]
-    # for sf in sampled_features:
-    #     response.headers[f"X-{sf}"] = str(request_data_df[sf][0])
+    # perform statistical tests
+    if client_id not in MONITOR_TRACKER.keys():
+        MONITOR_TRACKER[client_id] = Monitor(client_id=client_id, reference_data=None)
+    updated = MONITOR_TRACKER[client_id].iterate(new_rows=request_data_df)
+    if updated:
+        # save the desired metrics to be tracked for each model to the response headers
+        # the instrumentator in metrics_instrumentation.py will read from these headers
+        response.headers["X-target"] = str(MONITOR_TRACKER[client_id].metrics['target_chi_square_p_value'])
+        response.headers["X-predicted"] = str(MONITOR_TRACKER[client_id].metrics['predicted_chi_square_p_value'])
+        response.headers["X-client_id"] = str(request_data_df["client_id_"][0])
+        # sampled_features = [
+        #     c for c in request_data_df.columns
+        #     if c not in ["target_", "predicted_", "client_id_", "date_"]
+        # ]
+        # for sf in sampled_features:
+        #     response.headers[f"X-{sf}"] = str(request_data_df[sf][0])
 
-    return "ok"
+        return "ok"
+    else:
+        return f"Not enough data for client {client_id} comparison.  Waiting for more requests..."

@@ -24,10 +24,10 @@ in with username = admin, password = admin, and skip the password update.
 
 ### Testing Different Types of Drift
 
-To test that the drift monitoring service can find different types of drift, you can use the `--dtt` or 
+To test that the drift monitoring service can find different types of drift, you can use the `-dtt` or 
 `--drift_test_type` argument for prepare_datasets.py.  The default is None, but if you run
 ```
-docker exec <container_id> python3 examples/prepare_datasets.py --dtt data_drift
+docker exec <container_id> python3 examples/prepare_datasets.py -dtt data_drift
 ```
 you will run a test for data drift (when the distribution of the features change).  This test is carried out by 
 setting up the training data for news articles related to space exploration, and setting up the test data for news 
@@ -52,15 +52,15 @@ When you look at the drift monitoring dashboard in Grafana, you should see what 
 
 ### Testing Multiple Client IDs or Models
 
-We will have many client IDs/models.  To test this functionality, you can use the `--nc` or `--nbr_clients` argument 
+We will have many client IDs/models.  To test this functionality, you can use the `-nc` or `--nbr_clients` argument 
 for prepare_datasets.py.  The default is 1, but if you run
 ```
-docker exec <container_id> python3 examples/prepare_datasets.py --nc 30
+docker exec <container_id> python3 examples/prepare_datasets.py -nc 30
 ```
 you will run a test for 30 clients/models.  The client IDs are randomly assigned for testing, so if you run a test for 
 multiple clients, you will not be able to test for different types of drift simultaneously.  The example will coerce 
 your arguments to prevent error.  All you have to remember is that if you want to test a particular type of drift, do 
-not use the `--nc` argument, as that will always take priority.
+not use the `-nc` argument, as that will always take priority.
 
 After preparing the datasets, run 
 ```

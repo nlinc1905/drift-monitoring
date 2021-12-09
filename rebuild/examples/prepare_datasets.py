@@ -155,7 +155,7 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
 
         train_data_filtered = [i for idx, i in enumerate(train_data) if idx in space_indices]
         bow_model = train_bow_model(text_input=train_data_filtered, sklearn_vectorizer=CountVectorizer)
-        features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+        features = bow_model.get_feature_names_out()  # 1 feature per word in vocabulary
         train_vect = bow_model.transform(train_data)
 
         model = SVC(
@@ -227,7 +227,7 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
             # train model on mixed (model will train on train_data, train_target)
 
             bow_model = train_bow_model(text_input=train_data_for_client, sklearn_vectorizer=CountVectorizer)
-            features = bow_model.get_feature_names()  # 1 feature per word in vocabulary
+            features = bow_model.get_feature_names_out()  # 1 feature per word in vocabulary
             train_vect = bow_model.transform(train_data_for_client)
 
             model = SVC(
