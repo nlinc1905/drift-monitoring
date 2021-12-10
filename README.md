@@ -6,7 +6,8 @@ Drift monitoring for machine learning models with Prometheus & Grafana
 1. [Running the Example](#running-the-example)
    1. [Testing Different Types of Drift](#testing-drift-types)
    2. [Testing Multiple Clients or Models](#testing-multiple-models)
-2. [Helpful Notes for Developing & Testing](#developer-notes)
+2. [Unit Tests](#unit-tests)
+3. [Helpful Notes for Developing & Testing](#developer-notes)
    1. [Drift Monitoring Service API](#monitoring-serivce)
    2. [Prometheus](#prometheus)
    3. [Grafana](#grafana)
@@ -80,6 +81,15 @@ not use the `-nc` argument, as that will always take priority.
 After preparing the datasets, run 
 ```
 docker exec <container_id> python3 examples/example_run_request.py 
+```
+
+<a name="unit-tests"></a>
+## Unit Tests
+
+To run the unit tests from the root directory:
+
+```
+docker exec <container_id> python3 -m pytest
 ```
 
 <a name="developer-notes"></a>

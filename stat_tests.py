@@ -3,7 +3,7 @@ import numpy as np
 from scipy.stats import ks_2samp, chisquare
 
 
-def ks_test(reference_data: pd.DataFrame, current_data: pd.DataFrame, resample: bool=True):
+def ks_test(reference_data: pd.Series, current_data: pd.Series, resample: bool=True):
     """
     Calculates the p-value for the Kolmogorov-Smirnov test, which compares distributions
     of continuous variables.
@@ -38,7 +38,7 @@ def ks_test(reference_data: pd.DataFrame, current_data: pd.DataFrame, resample: 
     return ks_2samp(reference_data, current_data)[1]
 
 
-def chi_square_test(reference_data: pd.DataFrame, current_data: pd.DataFrame, resample: bool=True):
+def chi_square_test(reference_data: pd.Series, current_data: pd.Series, resample: bool=True):
     """
     Calculates the p-value for the Chi-square test, which compares observed frequencies
     to expected frequencies for categorical variables.
