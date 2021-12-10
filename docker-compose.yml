@@ -1,20 +1,23 @@
 version: '3.7'
 
 volumes:
-    prometheus_data: {}
-    grafana_data: {}
+  prometheus_data: {}
+  grafana_data: {}
 
 networks:
   front-tier:
   back-tier:
 
 services:
-  evidently_service:
+  drift_monitoring_service:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
+    # TODO: this bind mount is overkill, how to improve it?
+    volumes:
+      - .:/app
     networks:
       - back-tier
       - front-tier
@@ -50,6 +53,7 @@ services:
       - front-tier
     restart: always
 
+  # this service is only for testing and development, as CisionAI will replace the model_api in prod
   model_api:
     build: .
     command: python3 -m uvicorn model_api.main:app --host 0.0.0.0

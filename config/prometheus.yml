@@ -1,7 +1,7 @@
 # my global config
 global:
-  scrape_interval:     15s # By default, scrape targets every 15 seconds.
-  evaluation_interval: 15s # By default, scrape targets every 15 seconds.
+  scrape_interval: 15s      # Set the scrape interval.  Default is every 1 minute.
+  evaluation_interval: 15s  # Set the evaluation interval.  Default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
 
   # Attach these labels to any time series or alerts when communicating with
@@ -9,13 +9,13 @@ global:
   external_labels:
       monitor: 'my-project'
 
-# Load and evaluate rules in this file every 'evaluation_interval' seconds.
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
   - 'alert.rules'
   # - "first.rules"
   # - "second.rules"
 
-# alert
+# Alertmanager configuration
 alerting:
   alertmanagers:
   - scheme: http
@@ -27,52 +27,15 @@ alerting:
 # Here it's Prometheus itself.
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-
   - job_name: 'prometheus'
-
-    # Override the global default and scrape targets from this job every 5 seconds.
-    scrape_interval: 5s
-
+    # Override the global default and scrape targets from this job every n seconds.
+    scrape_interval: 3s
     static_configs:
-         - targets: ['localhost:9090']
+      - targets: ['localhost:9090']
 
-
-#  - job_name: 'cadvisor'
-#
-#    # Override the global default and scrape targets from this job every 5 seconds.
-#    scrape_interval: 5s
-#
-#    dns_sd_configs:
-#    - names:
-#      - 'tasks.cadvisor'
-#      type: 'A'
-#      port: 8080
-
-#     static_configs:
-#          - targets: ['cadvisor:8080']
-
-#  - job_name: 'node-exporter'
-#
-#    # Override the global default and scrape targets from this job every 5 seconds.
-#    scrape_interval: 5s
-#
-#    dns_sd_configs:
-#    - names:
-#      - 'tasks.node-exporter'
-#      type: 'A'
-#      port: 9100
-
-#  - job_name: 'pushgateway'
-#    scrape_interval: 10s
-#    dns_\sd_configs:
-#    - names:
-#      - 'tasks.pushgateway'
-#      type: 'A'
-#      port: 9091
-
-#     static_configs:
-#          - targets: ['node-exporter:9100']
-  - job_name: 'service'
-    scrape_interval: 10s
+  # Add a new job name to scrape time series from the drift monitoring service, running on port 5000.
+  - job_name: 'drift_monitoring_service'
+    # Override the global default and scrape targets from this job every n seconds.
+    scrape_interval: 3s
     static_configs:
-      - targets: ['evidently_service.:5000']
+      - targets: ['drift_monitoring_service.:5000']

@@ -20,35 +20,33 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1639159722125,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "datasource": null,
       "gridPos": {
-        "h": 3,
+        "h": 4,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 14,
       "options": {
-        "content": "# Model Drift Monitoring\n\n  This dashboard performs checks for concept drift and data drift.\n",
+        "content": "# Model Drift Monitoring\n\n  This dashboard performs checks for concept drift, prior drift, and data drift.\n\n  The filter at the top focuses the entire dashboard to 1 client ID or model.  (There is 1 model per client).\n",
         "mode": "markdown"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "8.3.1",
       "type": "text"
     },
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 4
       },
       "id": 19,
       "panels": [],
@@ -56,7 +54,10 @@
       "type": "row"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "description": "Drift is detected when the p-value of the Chi-squared test falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nPrior Drift = Target Drift = when the distribution of the ground truth labels has shifted between the training set and current data\n<br/><br/>\nConcept Drift = Prediction drift = when the distribution of the predicted class has shifted between the training set and current data, representing a change in the relationship between the target and the features.",
       "fieldConfig": {
         "defaults": {
@@ -98,13 +99,8 @@
               "options": {
                 "0": {
                   "color": "red",
-                  "index": 1,
-                  "text": "Drift (95% CI)"
-                },
-                "0.05": {
-                  "color": "green",
                   "index": 0,
-                  "text": "No Drift"
+                  "text": "0, Drift (95% CI)"
                 }
               },
               "type": "value"
@@ -146,7 +142,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 5
       },
       "id": 17,
       "maxDataPoints": 1176,
@@ -163,31 +159,30 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "evidently:concept_drift:prediction_drift",
+          "expr": "drift_monitoring_api_model_predicted",
           "interval": "",
           "legendFormat": "Concept Drift",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "evidently:concept_drift:target_drift",
+          "expr": "drift_monitoring_api_model_target",
           "hide": false,
           "interval": "",
           "legendFormat": "Prior Drift",
           "refId": "B"
         }
       ],
-      "title": "Prior and Concept Drift Chi-Squared p-values",
+      "title": "Concept and Prior Drift Chi-Squared p-values",
       "type": "timeseries"
     },
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 13
       },
       "id": 12,
       "panels": [],
@@ -195,219 +190,10 @@
       "type": "row"
     },
     {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 3,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "max": 1,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0.8
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 13
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "evidently:data_drift:share_drifted_features",
-          "interval": "",
-          "legendFormat": "% Features",
-          "refId": "A"
-        }
-      ],
-      "title": "% of Features with Drift",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 12,
-        "y": 13
-      },
-      "id": 8,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^Drifted$/",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "evidently:data_drift:n_drifted_features",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "Drifted",
-          "refId": "B"
-        }
-      ],
-      "title": "# of Drifted Features",
-      "transformations": [],
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 18,
-        "y": 13
-      },
-      "id": 15,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "evidently:data_drift:n_features",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "Total",
-          "refId": "A"
-        }
-      ],
-      "title": "Total # of Features",
-      "transformations": [],
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
       "description": "Data drift is detected when the Kolmogorov-Smirnov p-value falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nFeature frequencies are treated as numeric.",
       "fieldConfig": {
         "defaults": {
@@ -478,42 +264,13 @@
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "none"
-              },
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "max",
-                "value": 1
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 8
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "hidden"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 14
       },
       "id": 4,
       "options": {
@@ -528,11 +285,123 @@
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": true,
-          "expr": "evidently:data_drift:p_value",
+          "expr": "drift_monitoring_api_model_sample_feature_1",
           "interval": "",
-          "legendFormat": "{{feature}}",
+          "legendFormat": "Sample Feature 1",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_2",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 2",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_3",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 3",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_4",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 4",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_5",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 5",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_6",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 6",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_7",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 7",
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_8",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 8",
+          "refId": "H"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_9",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 9",
+          "refId": "I"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_sample_feature_10",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Sample Feature 10",
+          "refId": "J"
         }
       ],
       "title": "Kolmogorov-Smirnov p-value by Feature",
@@ -540,11 +409,25 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 31,
+  "schemaVersion": 33,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "description": "Filter this dashboard to a specific client ID/model",
+        "filters": [],
+        "hide": 0,
+        "label": "Client ID Filter",
+        "name": "ClientFilter",
+        "skipUrlSync": false,
+        "type": "adhoc"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
@@ -552,7 +435,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Drift Monitoring Dashboard",
+  "title": "Drift Monitoring Dashboard - by Client/Model",
   "uid": "U54hsxv7k",
-  "version": 1
+  "version": 1,
+  "weekStart": ""
 }
