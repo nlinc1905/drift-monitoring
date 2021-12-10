@@ -2,16 +2,16 @@ column_mapping:
   categorical_features: []
   datetime: date_
   numerical_features:
-  - church
-  - god
-  - help
-  - high
-  - let
-  - mail
+  - does
+  - host
+  - just
+  - know
   - make
-  - need
-  - net
-  - way
+  - new
+  - subject
+  - think
+  - world
+  - writes
   prediction: predicted_
   target: target_
 data_format:

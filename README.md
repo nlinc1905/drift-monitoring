@@ -178,6 +178,10 @@ interface and either
 
 The 2nd option is preferred.
 
+**Make sure you copy/paste the JSON WITHOUT checking the export for sharing externally option.**  See 
+this [bug](https://github.com/grafana/grafana/issues/11018).  The easiest way to do this is to click the save icon and 
+copy the JSON from there.  
+
 To edit an existing dashboard, make your changes in the Grafana interface and copy or export the JSON to overwrite the 
 file in /dashboards.
 

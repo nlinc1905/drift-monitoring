@@ -1,8 +1,8 @@
 version: '3.7'
 
 volumes:
-    prometheus_data: {}
-    grafana_data: {}
+  prometheus_data: {}
+  grafana_data: {}
 
 networks:
   front-tier:
@@ -15,6 +15,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
+    # TODO: this bind mount is overkill, how to improve it?
+    volumes:
+      - .:/app
     networks:
       - back-tier
       - front-tier
