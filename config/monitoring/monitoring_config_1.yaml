@@ -2,16 +2,16 @@ column_mapping:
   categorical_features: []
   datetime: date_
   numerical_features:
-  - article
-  - com
-  - god
+  - ask
+  - called
   - host
-  - just
-  - people
-  - rutgers
-  - space
+  - idea
+  - john
+  - life
+  - little
+  - really
+  - research
   - think
-  - time
   prediction: predicted_
   target: target_
 data_format:

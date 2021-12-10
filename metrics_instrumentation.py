@@ -93,3 +93,13 @@ instrumentator.add(
         metric_subsystem=SUBSYSTEM,
     )
 )
+
+# metric to track the sample features for each client_id/model
+for i in range(10):
+    instrumentator.add(
+        model_metric(
+            metric_name=f"sample_feature_{int(i + 1)}",
+            metric_namespace=NAMESPACE,
+            metric_subsystem=SUBSYSTEM,
+        )
+    )

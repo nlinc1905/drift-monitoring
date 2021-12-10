@@ -248,7 +248,7 @@
           "exemplar": true,
           "expr": "drift_monitoring_api_model_http_requests_total",
           "interval": "",
-          "legendFormat": "{{method}}",
+          "legendFormat": "{{method}} {{status}}",
           "refId": "A"
         }
       ],
@@ -271,6 +271,6 @@
   "timezone": "",
   "title": "Drift Monitoring Dashboard - High Level",
   "uid": "BDeZHa2nk",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

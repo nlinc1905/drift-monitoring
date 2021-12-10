@@ -272,6 +272,8 @@ def prepare_reference_dataset(drift_test_type=None, nbr_clients=1):
             train_df["date_"] = datetime.today() - timedelta(days=1)
             train_df["client_id_"] = [client] * len(train_target_for_client)
 
+            for feat_id, feat in enumerate(sampled_feature_names):
+                train_df.rename(columns={feat: f"sample_feature_{int(feat_id + 1)}"}, inplace=True)
             train_df.to_csv(f"{DATA_DIR}reference_{client}.csv", index=False)
 
             logging.info(f"Reference dataset created with {train_df.shape[0]} rows for client {client}")

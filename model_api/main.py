@@ -64,6 +64,8 @@ def get_preds_from_model(json_data):
     test_df["date_"] = datetime.today()
     test_df["client_id_"] = payload_dict["client_id"][0]
 
+    for feat_id, feat in enumerate(sampled_feature_names):
+        test_df.rename(columns={feat: f"sample_feature_{int(feat_id + 1)}"}, inplace=True)
     return test_df.to_json(orient="index")
 
 

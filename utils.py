@@ -122,6 +122,16 @@ class Monitor:
         )
 
         # hypothesis test for features
+        sampled_features = [
+            c for c in self.current_data.columns
+            if c not in ["target_", "predicted_", "client_id_", "date_"]
+        ]
+        for feat_id, feat in enumerate(sampled_features):
+            self.metrics[f'{feat}_p_value'] = ks_test(
+                reference_data=self.reference_data[feat],
+                current_data=self.current_data[feat],
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
 
         return True
 

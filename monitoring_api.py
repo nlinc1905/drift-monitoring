@@ -1,7 +1,7 @@
 import pandas as pd
 from fastapi import FastAPI, Response
 from fastapi.encoders import jsonable_encoder
-from pydantic import create_model
+from pydantic import BaseModel, create_model
 from os import path
 
 from metrics_instrumentation import instrumentator
@@ -19,16 +19,16 @@ DynamicDataModel = create_model(
     predicted_=(int, 1),
     date_=(int, 1000),
     client_id_=(int, 1),
-    sample_word1=(float, None),
-    sample_word2=(float, None),
-    sample_word3=(float, None),
-    sample_word4=(float, None),
-    sample_word5=(float, None),
-    sample_word6=(float, None),
-    sample_word7=(float, None),
-    sample_word8=(float, None),
-    sample_word9=(float, None),
-    sample_word10=(float, None),
+    sample_feature_1=(float, None),
+    sample_feature_2=(float, None),
+    sample_feature_3=(float, None),
+    sample_feature_4=(float, None),
+    sample_feature_5=(float, None),
+    sample_feature_6=(float, None),
+    sample_feature_7=(float, None),
+    sample_feature_8=(float, None),
+    sample_feature_9=(float, None),
+    sample_feature_10=(float, None),
 )
 
 
@@ -76,12 +76,14 @@ async def iterate(response: Response, dynamicdatamodel: DynamicDataModel):
         response.headers["X-target"] = str(MONITOR_TRACKER[client_id].metrics['target_chi_square_p_value'])
         response.headers["X-predicted"] = str(MONITOR_TRACKER[client_id].metrics['predicted_chi_square_p_value'])
         response.headers["X-client_id"] = str(request_data_df["client_id_"][0])
-        # sampled_features = [
-        #     c for c in request_data_df.columns
-        #     if c not in ["target_", "predicted_", "client_id_", "date_"]
-        # ]
-        # for sf in sampled_features:
-        #     response.headers[f"X-{sf}"] = str(request_data_df[sf][0])
+        sampled_features = [
+            c for c in request_data_df.columns
+            if c not in ["target_", "predicted_", "client_id_", "date_"]
+        ]
+        for sf_id, sf in enumerate(sampled_features):
+            response.headers[f"X-{sf}"] = str(
+                MONITOR_TRACKER[client_id].metrics[f'{sf}_p_value']
+            )
 
         return "ok"
     else:
