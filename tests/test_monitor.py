@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 
-from utils import Monitor
+from monitoring_service.monitor import Monitor
 
 
 _integer_types = (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)

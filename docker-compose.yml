@@ -13,14 +13,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      - PROMETHEUS_METRICS_NAMESPACE=drift_monitoring_api
+      - RESAMPLE_FOR_HYPOTHESIS_TEST=True
+      - PYTHONUNBUFFERED=1
     ports:
       - "5000:5000"
-    # TODO: this bind mount is overkill, how to improve it?
     volumes:
-      - .:/app
+      - /app/config/monitoring
+      - /app/data
+      - ./:/app
     networks:
       - back-tier
       - front-tier
+    restart: always
 
   prometheus:
     image: prom/prometheus
@@ -31,7 +37,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
     ports:
-      - 9090:9090
+      - "9090:9090"
     networks:
       - back-tier
     restart: always
@@ -58,8 +64,9 @@ services:
     build: .
     command: python3 -m uvicorn model_api.main:app --host 0.0.0.0
     volumes:
-      - .:/app
+      - ./:/app
     ports:
       - "8000:8000"
     networks:
       - back-tier
+    restart: always
