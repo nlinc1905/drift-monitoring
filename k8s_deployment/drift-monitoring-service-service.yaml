@@ -10,6 +10,6 @@ spec:
       # no nodePort specified so one will be automatically assigned from the 30000-32000 range
   selector:
     component: drift-monitoring-service
-  type: LoadBalancer
+  # type: LoadBalancer
 status:
   loadBalancer: {}

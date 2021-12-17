@@ -22,6 +22,7 @@ spec:
             - --host
             - 0.0.0.0
           image: model-api
+          imagePullPolicy: Never  # change to Always in prod
           name: model-api
           ports:
             - containerPort: 8000

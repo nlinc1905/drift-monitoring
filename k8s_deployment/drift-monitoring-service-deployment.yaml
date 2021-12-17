@@ -23,6 +23,7 @@ spec:
             - name: RESAMPLE_FOR_HYPOTHESIS_TEST
               value: "True"
           image: drift-monitoring-service
+          imagePullPolicy: Never  # change to Always in prod
           name: drift-monitoring-service
           ports:
             - containerPort: 5000
