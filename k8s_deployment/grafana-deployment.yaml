@@ -23,12 +23,14 @@ spec:
           securityContext:
             runAsUser: 472
           volumeMounts:
-            - mountPath: /etc/grafana/provisioning/datasources/datasource.yaml
+            - mountPath: /etc/grafana/provisioning/datasources/grafana_datasources.yaml
               name: grafana-claim0
               readOnly: true
-            - mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: grafana_datasources.yaml
+            - mountPath: /etc/grafana/provisioning/dashboards/grafana_dashboards.yaml
               name: grafana-claim1
               readOnly: true
+              subPath: grafana_dashboards.yaml
             - mountPath: /opt/grafana/dashboards
               name: grafana-claim2
             - mountPath: /var/lib/grafana
@@ -39,10 +41,14 @@ spec:
           persistentVolumeClaim:
             claimName: grafana-claim0
             readOnly: true
+            configMap:
+              name: grafana-datasources
         - name: grafana-claim1
           persistentVolumeClaim:
             claimName: grafana-claim1
             readOnly: true
+            configMap:
+              name: grafana-dashboards
         - name: grafana-claim2
           persistentVolumeClaim:
             claimName: grafana-claim2
