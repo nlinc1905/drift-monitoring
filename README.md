@@ -7,7 +7,8 @@ Drift monitoring for machine learning models with Prometheus & Grafana
    1. [Testing Different Types of Drift](#testing-drift-types)
    2. [Testing Multiple Clients or Models](#testing-multiple-models)
 2. [Unit Tests](#unit-tests)
-3. [Helpful Notes for Developing & Testing](#developer-notes)
+3. [Deploying to Kubernetes](#k8s-deployment)
+4. [Helpful Notes for Developing & Testing](#developer-notes)
    1. [Drift Monitoring Service API](#monitoring-serivce)
    2. [Prometheus](#prometheus)
    3. [Grafana](#grafana)
@@ -91,6 +92,30 @@ To run the unit tests from the root directory:
 ```
 docker exec <container_id> python3 -m pytest
 ```
+
+<a name="k8s-deployment"></a>
+## Deploying to Kubernetes
+
+The k8s_deployment folder has the config files for Kubernetes deployments.  
+
+To test the deployment locally with Minikube:
+
+```
+minikube start
+eval $(minikube docker-env)
+docker build -t drift-monitoring-service .
+cd k8s_deployment
+kubectl apply -f .
+```
+
+The services should now be running in Minikube.  You can view them and open the Grafana service:
+
+```
+minikube service list
+minikube service <service_name>
+```
+
+The Grafana service is the only one that is exposed by a load balancer.
 
 <a name="developer-notes"></a>
 ## Helpful Notes for Developing & Testing
