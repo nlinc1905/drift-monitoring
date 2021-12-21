@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: grafana-claim1
+  name: grafana-dashboards-folder
 spec:
   accessModes:
-    - ReadOnlyMany
+    - ReadWriteOnce
   resources:
     requests:
-      storage: 1Mi
+      storage: 100Mi
 status: {}

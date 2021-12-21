@@ -24,34 +24,28 @@ spec:
             runAsUser: 472
           volumeMounts:
             - mountPath: /etc/grafana/provisioning/datasources/grafana_datasources.yaml
-              name: grafana-claim0
+              name: grafana-datasources
               readOnly: true
               subPath: grafana_datasources.yaml
             - mountPath: /etc/grafana/provisioning/dashboards/grafana_dashboards.yaml
-              name: grafana-claim1
+              name: grafana-dashboards
               readOnly: true
               subPath: grafana_dashboards.yaml
             - mountPath: /opt/grafana/dashboards
-              name: grafana-claim2
+              name: grafana-dashboards-folder
             - mountPath: /var/lib/grafana
               name: grafana-data
       restartPolicy: Always
       volumes:
-        - name: grafana-claim0
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: grafana-dashboards-folder
           persistentVolumeClaim:
-            claimName: grafana-claim0
-            readOnly: true
-            configMap:
-              name: grafana-datasources
-        - name: grafana-claim1
-          persistentVolumeClaim:
-            claimName: grafana-claim1
-            readOnly: true
-            configMap:
-              name: grafana-dashboards
-        - name: grafana-claim2
-          persistentVolumeClaim:
-            claimName: grafana-claim2
+            claimName: grafana-dashboards-folder
         - name: grafana-data
           persistentVolumeClaim:
             claimName: grafana-data

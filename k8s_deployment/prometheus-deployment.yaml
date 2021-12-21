@@ -24,17 +24,15 @@ spec:
           resources: {}
           volumeMounts:
             - mountPath: /etc/prometheus/prometheus.yml
-              name: prometheus-claim0
+              name: prometheus-config
               subPath: prometheus.yml
             - mountPath: /prometheus
               name: prometheus-data
       restartPolicy: Always
       volumes:
-        - name: prometheus-claim0
-          persistentVolumeClaim:
-            claimName: prometheus-claim0
-            configMap:
-              name: prometheus-config
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
         - name: prometheus-data
           persistentVolumeClaim:
             claimName: prometheus-data
