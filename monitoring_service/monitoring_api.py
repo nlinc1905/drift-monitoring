@@ -4,8 +4,9 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, create_model
 from os import path
 
-from metrics_instrumentation import instrumentator
-from utils import create_config, Monitor
+from monitoring_service.metrics_instrumentation import instrumentator
+from monitoring_service.utils import create_config
+from monitoring_service.monitor import Monitor
 
 
 MONITOR_TRACKER = {}
@@ -35,7 +36,7 @@ DynamicDataModel = create_model(
 app = FastAPI()
 instrumentator.instrument(app).expose(app)
 
-# start app with: uvicorn monitoring_api:app --reload
+# start app with: uvicorn monitoring_service.monitoring_api:app --reload
 # to view the app: http://localhost:8000
 # to view metrics:  http://localhost:8000/metrics
 # when running with Docker, configure a job for this app in prometheus.yml, and test at http://localhost:9090/targets

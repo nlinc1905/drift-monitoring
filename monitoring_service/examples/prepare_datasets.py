@@ -13,7 +13,7 @@ from sklearn.svm import SVC
 from datetime import datetime, timedelta
 
 
-DATA_DIR = "./data/"
+DATA_DIR = "data/"
 ARTIFACTS_DIR = DATA_DIR + "artifacts/"
 SEED = 14
 random.seed(SEED)
@@ -42,9 +42,9 @@ def train_bow_model(text_input, sklearn_vectorizer):
 
 def write_config_yaml(feature_names, filename_suffix=None):
     """
-    The config/evidently_config.yaml file requires specifying variable names, but since we are randomly sampling
+    The monitoring_service config files require specifying variable names, but since we are randomly sampling
     which features to use, they will not be known in advance.  Therefore, we generate a new
-    yaml file here and overwrite the existing config/evidently_config.yaml
+    yaml file here and overwrite the existing configs.
 
     :feature_names: (list of strings) names of the features, or the words for a BoW model
     :filename_suffix: (str) optional string to append to the config file name, such as when there
@@ -75,7 +75,7 @@ def write_config_yaml(feature_names, filename_suffix=None):
         ),
     )
 
-    with open(f"./config/monitoring/monitoring_config{filename_suffix or '_1'}.yaml", "w") as outfile:
+    with open(f"config/monitoring/monitoring_config{filename_suffix or '_1'}.yaml", "w") as outfile:
         yaml.dump(output, outfile, default_flow_style=False)
 
 

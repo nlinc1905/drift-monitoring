@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 
-from stat_tests import ks_test, chi_square_test
+from monitoring_service.stat_tests import ks_test, chi_square_test
 
 
 def test_ks_test():

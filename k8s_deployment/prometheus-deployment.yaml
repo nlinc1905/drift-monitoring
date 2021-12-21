@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: prometheus
+  template:
+    metadata:
+      labels:
+        io.kompose.network/back-tier: "true"
+        component: prometheus
+    spec:
+      containers:
+        - args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+          image: prom/prometheus
+          name: prometheus
+          ports:
+            - containerPort: 9090
+          resources: {}
+          volumeMounts:
+            - mountPath: /etc/prometheus/prometheus.yml
+              name: prometheus-config
+              subPath: prometheus.yml
+            - mountPath: /prometheus
+              name: prometheus-data
+      restartPolicy: Always
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: prometheus-data
+status: {}

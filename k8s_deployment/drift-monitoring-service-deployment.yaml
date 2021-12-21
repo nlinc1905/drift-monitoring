@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drift-monitoring-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: drift-monitoring-service
+  template:
+    metadata:
+      labels:
+        io.kompose.network/back-tier: "true"
+        io.kompose.network/front-tier: "true"
+        component: drift-monitoring-service
+    spec:
+      containers:
+        - env:
+            - name: PROMETHEUS_METRICS_NAMESPACE
+              value: drift_monitoring_api
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: RESAMPLE_FOR_HYPOTHESIS_TEST
+              value: "True"
+          image: drift-monitoring-service
+          imagePullPolicy: Never  # TODO: change to Always in prod
+          name: drift-monitoring-service
+          ports:
+            - containerPort: 5000
+          resources: {}
+          volumeMounts:
+            - mountPath: /app/config/monitoring
+              name: drift-monitoring-service-claim0
+            - mountPath: /app/data
+              name: drift-monitoring-service-claim1
+            - mountPath: /app
+              name: drift-monitoring-service-claim2
+      restartPolicy: Always
+      volumes:
+        - name: drift-monitoring-service-claim0
+          persistentVolumeClaim:
+            claimName: drift-monitoring-service-claim0
+        - name: drift-monitoring-service-claim1
+          persistentVolumeClaim:
+            claimName: drift-monitoring-service-claim1
+        - name: drift-monitoring-service-claim2
+          persistentVolumeClaim:
+            claimName: drift-monitoring-service-claim2
+status: {}

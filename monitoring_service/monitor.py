@@ -2,49 +2,11 @@ import os
 import pandas as pd
 from ruamel import yaml
 
-from stat_tests import ks_test, chi_square_test
+from monitoring_service.stat_tests import ks_test, chi_square_test
 
 
 DATA_DIR = "data/"
 RESAMPLE_FOR_HYPOTHESIS_TEST = os.environ.get("RESAMPLE_FOR_HYPOTHESIS_TEST", True)
-
-
-def create_config(feature_names, filename_suffix=None):
-    """
-    Create a new config file for the client_id in config/monitoring.
-
-    :feature_names: (list of strings) names of the features, or the words for a BoW model
-    :filename_suffix: (str) optional string to append to the config file name, such as when there
-        is 1 config per model/client
-    """
-    # TODO: update this after seeing what prod will look like
-    output = dict(
-        data_format=dict(
-            separator=",",
-            header=True,
-            date_column="date_",
-        ),
-        column_mapping=dict(
-            target="target_",
-            prediction="predicted_",
-            datetime="date_",
-            numerical_features=feature_names,
-            categorical_features=[]
-        ),
-        pretty_print=True,
-        service=dict(
-            reference_path=f"{DATA_DIR}reference{filename_suffix or '_1'}.csv",
-            min_reference_size=30,
-            use_reference=True,
-            moving_reference=False,
-            window_size=30,
-            calculation_period_sec=10,
-            monitors=["data_drift", "concept_drift", "regression_performance"],
-        ),
-    )
-
-    with open(f"config/monitoring/monitoring_config{filename_suffix or '_1'}.yaml", "w") as outfile:
-        yaml.dump(output, outfile, default_flow_style=False)
 
 
 class Monitor:
@@ -134,13 +96,3 @@ class Monitor:
             )
 
         return True
-
-"""
-# test the Monitor class
-m = Monitor(client_id="1", reference_data=None)
-new_d = pd.read_csv("data/production.csv")
-new_d.rename(columns={"target": "target_"}, inplace=True)
-new_d['predicted_'] = 1
-m.iterate(new_rows=new_d.iloc[:40])
-m.iterate(new_rows=new_d.iloc[40:50])
-"""

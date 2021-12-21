@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: grafana
+  template:
+    metadata:
+      labels:
+        io.kompose.network/back-tier: "true"
+        io.kompose.network/front-tier: "true"
+        component: grafana
+    spec:
+      containers:
+        - image: grafana/grafana
+          name: grafana
+          ports:
+            - containerPort: 3000
+          resources: {}
+          securityContext:
+            runAsUser: 472
+          volumeMounts:
+            - mountPath: /etc/grafana/provisioning/datasources/grafana_datasources.yaml
+              name: grafana-datasources
+              readOnly: true
+              subPath: grafana_datasources.yaml
+            - mountPath: /etc/grafana/provisioning/dashboards/grafana_dashboards.yaml
+              name: grafana-dashboards
+              readOnly: true
+              subPath: grafana_dashboards.yaml
+            - mountPath: /opt/grafana/dashboards
+              name: grafana-dashboards-folder
+            - mountPath: /var/lib/grafana
+              name: grafana-data
+      restartPolicy: Always
+      volumes:
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: grafana-dashboards-folder
+          persistentVolumeClaim:
+            claimName: grafana-dashboards-folder
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: grafana-data
+status: {}

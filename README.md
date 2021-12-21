@@ -7,7 +7,8 @@ Drift monitoring for machine learning models with Prometheus & Grafana
    1. [Testing Different Types of Drift](#testing-drift-types)
    2. [Testing Multiple Clients or Models](#testing-multiple-models)
 2. [Unit Tests](#unit-tests)
-3. [Helpful Notes for Developing & Testing](#developer-notes)
+3. [Deploying to Kubernetes](#k8s-deployment)
+4. [Helpful Notes for Developing & Testing](#developer-notes)
    1. [Drift Monitoring Service API](#monitoring-serivce)
    2. [Prometheus](#prometheus)
    3. [Grafana](#grafana)
@@ -21,14 +22,14 @@ The first time you run the example, run `docker-compose up --build`.  This only 
 To run the example, `docker-compose up` to start the services.  Get the container ID by running `docker ps` and finding 
 the ID associated with drift_monitoring_serivce.  Then prepare the example data:
 ```
-docker exec <container_id> python3 examples/prepare_datasets.py
+docker exec <container_id> python3 monitoring_service/examples/prepare_datasets.py
 ```
 This will create the necessary test data.  There are options you can run to perform different tests with this example.  
 See the next section.
 
 After preparing the test data, you can 'stream' data from `data/production.csv` by running:
 ```
-docker exec <container_id> python3 examples/example_run_request.py
+docker exec <container_id> python3 monitoring_service/examples/example_run_request.py
 ```
 This will sample from the production data, 1 row every 3 seconds, and send requests to the drift monitoring 
 service.  (Actually, the requests are sent to the model_api service first, then to the drift monitoring service.)
@@ -42,7 +43,7 @@ in with username = admin, password = admin, and skip the password update.
 To test that the drift monitoring service can find different types of drift, you can use the `-dtt` or 
 `--drift_test_type` argument for prepare_datasets.py.  The default is None, but if you run
 ```
-docker exec <container_id> python3 examples/prepare_datasets.py -dtt data_drift
+docker exec <container_id> python3 monitoring_service/examples/prepare_datasets.py -dtt data_drift
 ```
 you will run a test for data drift (when the distribution of the features change).  This test is carried out by 
 setting up the training data for news articles related to space exploration, and setting up the test data for news 
@@ -56,11 +57,11 @@ current conditions
 * **concept_drift**, or when the relationship between the target, y, and the features, x, changes between the training 
 set and current conditions
 
-The docstrings in `examples/prepare_datasets.py` describe how the tests were engineered.  
+The docstrings in `monitoring_service/examples/prepare_datasets.py` describe how the tests were engineered.  
 
 After preparing the datasets, run 
 ```
-docker exec <container_id> python3 examples/example_run_request.py 
+docker exec <container_id> python3 monitoring_service/examples/example_run_request.py 
 ```
 
 When you look at the drift monitoring dashboard in Grafana, you should see what you might expect for each type of drift.
@@ -71,7 +72,7 @@ When you look at the drift monitoring dashboard in Grafana, you should see what 
 We will have many client IDs/models.  To test this functionality, you can use the `-nc` or `--nbr_clients` argument 
 for prepare_datasets.py.  The default is 1, but if you run
 ```
-docker exec <container_id> python3 examples/prepare_datasets.py -nc 30
+docker exec <container_id> python3 monitoring_service/examples/prepare_datasets.py -nc 30
 ```
 you will run a test for 30 clients/models.  The client IDs are randomly assigned for testing, so if you run a test for 
 multiple clients, you will not be able to test for different types of drift simultaneously.  The example will coerce 
@@ -80,7 +81,7 @@ not use the `-nc` argument, as that will always take priority.
 
 After preparing the datasets, run 
 ```
-docker exec <container_id> python3 examples/example_run_request.py 
+docker exec <container_id> python3 monitoring_service/examples/example_run_request.py 
 ```
 
 <a name="unit-tests"></a>
@@ -91,6 +92,30 @@ To run the unit tests from the root directory:
 ```
 docker exec <container_id> python3 -m pytest
 ```
+
+<a name="k8s-deployment"></a>
+## Deploying to Kubernetes
+
+The k8s_deployment folder has the config files for Kubernetes deployments.  
+
+To test the deployment locally with Minikube:
+
+```
+minikube start
+eval $(minikube docker-env)
+docker build -t drift-monitoring-service .
+cd k8s_deployment
+kubectl apply -f .
+```
+
+The services should now be running in Minikube.  You can view them and open the Grafana service:
+
+```
+minikube service list
+minikube service <service_name>
+```
+
+The Grafana service is the only one that is exposed by a load balancer.
 
 <a name="developer-notes"></a>
 ## Helpful Notes for Developing & Testing
@@ -122,21 +147,20 @@ each of these is a green UP button, they are working.
 #### Adding a Custom Metric
 
 FastAPI has a Prometheus Instrumentator library for Python that is being used to integrate the drift monitoring service 
-with Prometheus.  To create a new metric, first add it to the response header in `monitoring_api.py`.  For example, this 
-is the response header that was added to track model predictions:
-<br/>
-`response.headers["X-predicted"] = str(request_data_df["predicted_"][0])`
-<br/>
+with Prometheus.  To create a new metric, first add it to the response header in `monitoring_service/monitoring_api.py`.  
+For example, this is the response header that was added to track model predictions:
+```
+response.headers["X-predicted"] = str(request_data_df["predicted_"][0])
+```
 The header is added to the `/iterate` endpoint.  
 
-Next, define your new metric in `metrics_instrumenation.py`.  You can copy the model_metric function that is there now 
-to get started.  Just replace the METRIC with whatever you want.  Note that there are 
+Next, define your new metric in `monitoring_service/metrics_instrumenation.py`.  You can copy the model_metric 
+function that is there now to get started.  Just replace the METRIC with whatever you want.  Note that there are 
 [4 types of metrics](https://prometheus.io/docs/concepts/metric_types/) that Prometheus can track.  See how to create 
 them with the Python Prometheus client here: 
 [https://github.com/prometheus/client_python#instrumenting](https://github.com/prometheus/client_python#instrumenting).
 
 Finally, add your metric to the instrumentator.  Here is an example for adding the predicted metric:
-<br/>
 ```
 instrumentator.add(
     model_metric(
@@ -202,8 +226,8 @@ See [Grafana's docs](https://grafana.com/docs/) for anything else.
 
 The model API will be replaced by CisionAI in production.  However, it was created here to test what might come out of 
 a model service and need to be monitored.  Running the example will hit this API.  You will notice in 
-`examples/examples_run_request.py` that the data is first sent to the model API, then to the drift monitoring API.  
+`monitoring_service/examples/examples_run_request.py` that the data is first sent to the model API, then to the drift monitoring API.  
 To test that the data is in the format necessary, you can compare what comes back from the model API to what is expected 
 by the Pydantic model defined in monitoring_api.py.  Additionally, you can run 
-`examples/test-reading_sample_response_from_model_api.py`, which was created solely for the purpose of testing this 
-integration.  
+`monitoring_service/examples/test-reading_sample_response_from_model_api.py`, which was created solely for the 
+purpose of testing this integration.  
