@@ -1,36 +1,36 @@
+import os
+import logging
 import pandas as pd
-from fastapi import FastAPI, Response
+from datetime import datetime, date
+from fastapi import FastAPI, Response, Body, Depends
 from fastapi.encoders import jsonable_encoder
+from typing import Optional, List
 from pydantic import BaseModel, create_model
-from os import path
+from sklearn.metrics import f1_score
+from sqlalchemy.orm import Session
 
+from monitoring_service import pydantic_models
 from monitoring_service.metrics_instrumentation import instrumentator
-from monitoring_service.utils import create_config
-from monitoring_service.monitor import Monitor
+from monitoring_service.stat_tests import chi_square_test, ks_test, bayesian_a_b_test
+
+from sql_db import crud, db_models
+from sql_db.database import SessionLocal, engine
 
 
-MONITOR_TRACKER = {}
+NBR_SAMPLES_REQUIRED_FOR_REFERENCE = 30
+NBR_SAMPLES_REQUIRED_FOR_BAYESIAN = 2000
+RESAMPLE_FOR_HYPOTHESIS_TEST = True
 
+logging.basicConfig(level=logging.INFO)
 
-# create a dynamic Pydantic model with optional fields, bc each sample word will vary by client_id
-# set them to floats with default of None to make them optional
-DynamicDataModel = create_model(
-    'DynamicDataModel',
-    target_=(int, 1),
-    predicted_=(int, 1),
-    date_=(int, 1000),
-    client_id_=(int, 1),
-    sample_feature_1=(float, None),
-    sample_feature_2=(float, None),
-    sample_feature_3=(float, None),
-    sample_feature_4=(float, None),
-    sample_feature_5=(float, None),
-    sample_feature_6=(float, None),
-    sample_feature_7=(float, None),
-    sample_feature_8=(float, None),
-    sample_feature_9=(float, None),
-    sample_feature_10=(float, None),
-)
+# Bind the DB engine to db_models and set up the DB as a dependency for this app
+db_models.Base.metadata.create_all(bind=engine)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 app = FastAPI()
@@ -47,45 +47,120 @@ def root():
     return {"message": "API working"}
 
 
-@app.post("/iterate")
-async def iterate(response: Response, dynamicdatamodel: DynamicDataModel):
-    """
-    Routes incoming new data (JSON) to the monitoring service to be appended to
-    the current dataset (monitoring_service.iterate is called with new_rows argument).
-    """
-    request_data = jsonable_encoder(dynamicdatamodel)
-    request_data_df = pd.DataFrame(request_data, index=[0])
+@app.get("/prediction_history/{model_id}")
+def get_predictions(model_id: str, db: Session = Depends(get_db)):
+    predictions, columns = crud.get_reference_predictions_for_model(db, model_id=model_id)
+    return pd.DataFrame.from_records(predictions, columns=columns).to_dict()
 
-    # create a new config file if the client_id has never been seen before
-    client_id = str(request_data_df["client_id_"][0])
-    if not path.exists(f"config/monitoring/monitoring_config{('_' + client_id) or '_1'}.yaml"):
-        create_config(
-            feature_names=[
-                c for c in request_data_df.columns
-                if c not in ["client_id_", "target_", "predicted_", "date_"]
-            ],
-            filename_suffix=('_' + client_id)
+
+@app.post("/metrics")
+async def compute_metrics(
+        response: Response,
+        inputdatamodel: pydantic_models.InputDataModelCreate = Body(..., examples=pydantic_models.input_examples),
+        db: Session = Depends(get_db)
+):
+    """
+    Updates the model monitoring database with the incoming new data (JSON), performs
+    statistical tests to detect drift, and saves the results as response headers for the
+    Prometheus instrumentator to send to Prometheus.
+    """
+    # update the database
+    crud.create_or_update_model(
+        db=db,
+        model_id=inputdatamodel.model_id,
+        model_type=inputdatamodel.model_type,
+        last_training_time=inputdatamodel.last_training_time
+    )
+    for pred in inputdatamodel.predictions:
+        pred_dict = pred.dict()
+        pred_dict['parent_model_id'] = inputdatamodel.model_id
+        crud.create_prediction(db=db, prediction=pred_dict)
+
+    # get reference data
+    records, columns = crud.get_reference_predictions_for_model(db=db, model_id=inputdatamodel.model_id)
+    reference_df = pd.DataFrame.from_records(records, columns=columns)
+
+    # if there is not enough reference data, do nothing
+    if len(reference_df) < NBR_SAMPLES_REQUIRED_FOR_REFERENCE:
+        message = {"message": f"Not enough reference samples for model {inputdatamodel.model_id}.  Waiting for more..."}
+        logging.info(message)
+        return message
+
+    # get data to be compared
+    records, columns = crud.get_current_predictions_for_model(db=db, model_id=inputdatamodel.model_id)
+    request_df = pd.DataFrame.from_records(records, columns=columns)
+
+    # perform statistical tests, use Bayesian if there is sufficient data
+    if len(reference_df) + len(request_df) >= NBR_SAMPLES_REQUIRED_FOR_BAYESIAN:
+        prediction_drift = bayesian_a_b_test(
+            a_array=reference_df['prediction'],
+            b_array=request_df['prediction']
         )
-
-    # perform statistical tests
-    if client_id not in MONITOR_TRACKER.keys():
-        MONITOR_TRACKER[client_id] = Monitor(client_id=client_id, reference_data=None)
-    updated = MONITOR_TRACKER[client_id].iterate(new_rows=request_data_df)
-    if updated:
-        # save the desired metrics to be tracked for each model to the response headers
-        # the instrumentator in metrics_instrumentation.py will read from these headers
-        response.headers["X-target"] = str(MONITOR_TRACKER[client_id].metrics['target_chi_square_p_value'])
-        response.headers["X-predicted"] = str(MONITOR_TRACKER[client_id].metrics['predicted_chi_square_p_value'])
-        response.headers["X-client_id"] = str(request_data_df["client_id_"][0])
-        sampled_features = [
-            c for c in request_data_df.columns
-            if c not in ["target_", "predicted_", "client_id_", "date_"]
-        ]
-        for sf_id, sf in enumerate(sampled_features):
-            response.headers[f"X-{sf}"] = str(
-                MONITOR_TRACKER[client_id].metrics[f'{sf}_p_value']
+        prior_drift = bayesian_a_b_test(
+            a_array=reference_df['ground_truth_label'],
+            b_array=request_df['ground_truth_label']
+        )
+        if inputdatamodel.model_type == "classifier":
+            concept_drift = bayesian_a_b_test(
+                a_array=reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
+                b_array=request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1)
+            )
+            prediction_prob_drift = bayesian_a_b_test(
+                a_array=reference_df['prediction_probability'],
+                b_array=request_df['prediction_probability']
+            )
+        else:
+            concept_drift = bayesian_a_b_test(
+                a_array=np.abs(reference_df['prediction'] - reference_df['ground_truth_label']),
+                b_array=np.abs(request_df['prediction'] - request_df['ground_truth_label'])
+            )
+            prediction_prob_drift = ""
+    else:
+        if inputdatamodel.model_type == "classifier":
+            concept_drift = chi_square_test(
+                reference_data=reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
+                current_data=request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
+            prediction_drift = chi_square_test(
+                reference_data=reference_df['prediction'],
+                current_data=request_df['prediction'],
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
+            prediction_prob_drift = ks_test(
+                reference_data=reference_df['prediction_probability'],
+                current_data=request_df['prediction_probability'],
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
+            prior_drift = chi_square_test(
+                reference_data=reference_df['ground_truth_label'],
+                current_data=request_df['ground_truth_label'],
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
+        else:
+            concept_drift = ks_test(
+                reference_data=np.abs(reference_df['prediction'] - reference_df['ground_truth_label']),
+                current_data=np.abs(request_df['prediction'] - request_df['ground_truth_label']),
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
+            prediction_drift = ks_test(
+                reference_data=reference_df['prediction'],
+                current_data=request_df['prediction'],
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+            )
+            prediction_prob_drift = ""
+            prior_drift = ks_test(
+                reference_data=reference_df['ground_truth_label'],
+                current_data=request_df['ground_truth_label'],
+                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
             )
 
-        return "ok"
-    else:
-        return f"Not enough data for client {client_id} comparison.  Waiting for more requests..."
+    # save the metrics to be tracked for each model to the response headers
+    # the instrumentator in metrics_instrumentation.py will read from these headers
+    response.headers["X-model_id"] = str(inputdatamodel.model_id)
+    response.headers["x-concept_drift"] = str(concept_drift)
+    response.headers["X-prediction_drift"] = str(prediction_drift)
+    response.headers["X-prediction_prob_drift"] = str(prediction_prob_drift)
+    response.headers["X-prior_drift"] = str(prior_drift)
+
+    return {"message": response.headers}

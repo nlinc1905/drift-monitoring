@@ -3,6 +3,7 @@ version: '3.7'
 volumes:
   prometheus_data: {}
   grafana_data: {}
+  monitoring_service_data: {}
 
 networks:
   front-tier:
@@ -17,11 +18,16 @@ services:
       - PROMETHEUS_METRICS_NAMESPACE=drift_monitoring_api
       - RESAMPLE_FOR_HYPOTHESIS_TEST=True
       - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=DEV
+      - ZMS_USER=${ZMS_USER}
+      - ZMS_PASSWORD=${ZMS_PASSWORD}
+      - ZMS_DSN=${ZMS_DSN}
     ports:
       - "5000:5000"
     volumes:
       - /app/config/monitoring
-      - /app/data
+      - monitoring_service_data:/app/data
+      - monitoring_service_db:/app/sql_db
       - ./:/app
     networks:
       - back-tier
@@ -59,11 +65,12 @@ services:
       - front-tier
     restart: always
 
-  # this service is only for testing and development, as CisionAI will replace the model_api in prod
+  # this service is only for testing and development, as your own model will replace the model_api in prod
   model_api:
     build: .
     command: python3 -m uvicorn model_api.main:app --host 0.0.0.0
     volumes:
+      - monitoring_service_data:/app/data
       - ./:/app
     ports:
       - "8000:8000"

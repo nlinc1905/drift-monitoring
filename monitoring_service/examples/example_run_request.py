@@ -1,5 +1,6 @@
 import json
 import time
+import datetime
 import requests
 import numpy as np
 import pandas as pd
@@ -24,6 +25,14 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    raise TypeError("Type %s not serializable" % type(obj))
+
+
 if __name__ == '__main__':
     new_data = pd.read_csv("data/production.csv")
     for idx in range(0, new_data.shape[0]):
@@ -31,23 +40,15 @@ if __name__ == '__main__':
         data = new_data.iloc[idx].to_dict()
 
         # first get the prediction output from the model API
-        # this step will be done in the zms-daemon
         # use the URL from the bridge network, see:
         # https://docs.docker.com/network/network-tutorial-standalone/#use-the-default-bridge-network
         model_api_response = requests.post(
             'http://172.17.0.1:8000/predict',
-            data=json.dumps(data, cls=NumpyEncoder),
+            data=json.dumps(data, cls=NumpyEncoder, default=json_serial),
         )
-        model_api_response_df = pd.read_json(json.loads(model_api_response.text), orient="index")
-        data = model_api_response_df.to_dict(orient="records")
-        # TODO: this API response will have to be updated to whatever comes from CisionAI
 
         # now send the model API's response to the drift monitoring service API
-        requests.post(
-            'http://localhost:5000/iterate',
-            data=json.dumps(data[0], cls=NumpyEncoder),
-            headers={"content-type": "application/json"}
-        )
+        requests.post('http://localhost:5000/metrics', json=model_api_response)
 
         # pause a bit to simulate a non-constant data stream
         time.sleep(1)

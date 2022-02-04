@@ -98,14 +98,33 @@ docker exec <container_id> python3 -m pytest
 
 The k8s_deployment folder has the config files for Kubernetes deployments.  
 
-To test the deployment locally with Minikube:
+To test the deployment locally with Minikube, first make sure that drift-monitoring-service-deployment.yaml is using 
+imagePullPolicy: Never, instead of Always.  This will allow you to build the image locally, and K8s will not go out and 
+look for it.  
 
 ```
 minikube start
+minikube addons enable ingress
 eval $(minikube docker-env)
 docker build -t drift-monitoring-service .
 cd k8s_deployment
+kubectl create -f namespaces.json
+```
+
+Create the secrets using the format shown here, but replacing the secret with its true value:
+
+```
+kubectl create secret generic zms-user --from-literal ZMS_USER=<put_stuff_here>
+kubectl create secret generic zms-password --from-literal ZMS_PASSWORD=<put_stuff_here>
+kubectl create secret generic zms-dsn --from-literal ZMS_DSN=<put_stuff_here>
+```
+
+Now the service is ready.  Apply everything and then update /etc/hosts to route everything from the host name in  
+ingress.yaml to the Minikube instance.  
+
+```
 kubectl apply -f .
+echo "$(minikube ip) zms-drift-monitoring-dev.app.cision.com" | sudo tee -a /etc/hosts
 ```
 
 The services should now be running in Minikube.  You can view them and open the Grafana service:
@@ -116,6 +135,16 @@ minikube service <service_name>
 ```
 
 The Grafana service is the only one that is exposed by a load balancer.
+
+Deployment requires setting the secrets associated with the Oracle DB with the article data.  This can be done using 
+kubectl's imperative commands in the cluster.  For example:
+
+```
+kubectl create secret generic zms_user --from-literal ZMS_USER=<put your username here>
+```
+
+Be sure to set these secrets for every environment variable that is sourced from secret in 
+drift-monitoring-service-deployment.yaml.
 
 <a name="developer-notes"></a>
 ## Helpful Notes for Developing & Testing

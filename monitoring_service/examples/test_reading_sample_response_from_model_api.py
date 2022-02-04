@@ -1,11 +1,12 @@
 import json
+import datetime
 import pandas as pd
 import numpy as np
 
 
 """
 Use this file to test what would be coming out of the model_api and being 
-passed to monitoring_api
+passed to monitoring_api.  This is used to test examples/example_run_request.py
 """
 
 
@@ -32,13 +33,14 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    raise TypeError("Type %s not serializable" % type(obj))
+
+
 with open(json_fp, 'r') as j:
     # copy the reading process from example_run_request.py
     d = json.loads(j.read())
-    print(d)
-    model_api_response_df = pd.read_json(d, orient="index")
-    print(model_api_response_df)
-    data = model_api_response_df.to_dict(orient="records")
-    print(data)
-    post_request = json.dumps(data, cls=NumpyEncoder)
-    print(post_request) # this is what the monitoring_api will get
+    print("Prod Data:\n", d, "\n")  # this is what the monitoring_api will get
