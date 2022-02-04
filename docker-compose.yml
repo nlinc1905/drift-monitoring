@@ -4,6 +4,7 @@ volumes:
   prometheus_data: {}
   grafana_data: {}
   monitoring_service_data: {}
+  monitoring_service_db: {}
 
 networks:
   front-tier:
@@ -18,10 +19,6 @@ services:
       - PROMETHEUS_METRICS_NAMESPACE=drift_monitoring_api
       - RESAMPLE_FOR_HYPOTHESIS_TEST=True
       - PYTHONUNBUFFERED=1
-      - ENVIRONMENT=DEV
-      - ZMS_USER=${ZMS_USER}
-      - ZMS_PASSWORD=${ZMS_PASSWORD}
-      - ZMS_DSN=${ZMS_DSN}
     ports:
       - "5000:5000"
     volumes:

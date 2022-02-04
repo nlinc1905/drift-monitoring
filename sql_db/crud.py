@@ -52,6 +52,7 @@ def get_current_predictions_for_model(db: Session, model_id: str):
 def create_or_update_model(db: Session, model_id: str, model_type: str, last_training_time: datetime):
     existing_record = db.query(db_models.Models).filter(db_models.Models.model_id == model_id).one_or_none()
     if existing_record is not None:
+        existing_record.model_type = model_type
         existing_record.last_training_time = last_training_time
         db.commit()
         return logging.info(f"Model {model_id} updated.")
