@@ -7,6 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from typing import Optional, List
 from pydantic import BaseModel, create_model
 from sklearn.metrics import f1_score
+from scipy.stats import wasserstein_distance
 from sqlalchemy.orm import Session
 
 from monitoring_service import pydantic_models
@@ -109,50 +110,84 @@ async def compute_metrics(
 
     # perform statistical tests and distance computations
     if inputdatamodel.model_type == "classifier":
+
+        concept_a = reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1)
+        concept_b = request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1)
         concept_drift = chi_square_test(
-            reference_data=reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
-            current_data=request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
+            reference_data=concept_a,
+            current_data=concept_b,
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
+        concept_emd = wasserstein_distance(concept_a.values, concept_b.values)
+
         prediction_drift = chi_square_test(
             reference_data=reference_df['prediction'],
             current_data=request_df['prediction'],
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
+        prediction_emd = wasserstein_distance(reference_df['prediction'].values, request_df['prediction'].values)
+
         prediction_prob_drift = ks_test(
             reference_data=reference_df['prediction_probability'],
             current_data=request_df['prediction_probability'],
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
+        prediction_prob_emd = wasserstein_distance(
+            reference_df['prediction_probability'].values,
+            request_df['prediction_probability'].values
+        )
+
         prior_drift = chi_square_test(
             reference_data=reference_df['ground_truth_label'],
             current_data=request_df['ground_truth_label'],
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
+        prior_emd = wasserstein_distance(
+            reference_df['ground_truth_label'].values,
+            request_df['ground_truth_label'].values
+        )
+
     else:
+
+        concept_a = np.abs(reference_df['prediction'] - reference_df['ground_truth_label'])
+        concept_b = np.abs(request_df['prediction'] - request_df['ground_truth_label'])
         concept_drift = ks_test(
-            reference_data=np.abs(reference_df['prediction'] - reference_df['ground_truth_label']),
-            current_data=np.abs(request_df['prediction'] - request_df['ground_truth_label']),
+            reference_data=concept_a,
+            current_data=concept_b,
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
+        concept_emd = wasserstein_distance(concept_a.values, concept_b.values)
+
         prediction_drift = ks_test(
             reference_data=reference_df['prediction'],
             current_data=request_df['prediction'],
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
+        prediction_emd = wasserstein_distance(reference_df['prediction'].values, request_df['prediction'].values)
+
         prediction_prob_drift = ""
+        prediction_prob_emd = ""
+
         prior_drift = ks_test(
             reference_data=reference_df['ground_truth_label'],
             current_data=request_df['ground_truth_label'],
             resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+        )
+        prior_emd = wasserstein_distance(
+            reference_df['ground_truth_label'].values,
+            request_df['ground_truth_label'].values
         )
 
     # save the metrics to be tracked for each model to the response headers
     # the instrumentator in metrics_instrumentation.py will read from these headers
     response.headers["X-model_id"] = str(inputdatamodel.model_id)
     response.headers["x-concept_drift"] = str(concept_drift)
+    response.headers["x-concept_drift_emd"] = str(concept_emd)
     response.headers["X-prediction_drift"] = str(prediction_drift)
+    response.headers["x-prediction_emd"] = str(prediction_emd)
     response.headers["X-prediction_prob_drift"] = str(prediction_prob_drift)
+    response.headers["X-prediction_prob_emd"] = str(prediction_prob_emd)
     response.headers["X-prior_drift"] = str(prior_drift)
+    response.headers["X-prior_emd"] = str(prior_emd)
 
     return {"message": response.headers}

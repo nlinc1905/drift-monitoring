@@ -84,10 +84,24 @@ instrumentator.add(
         metric_subsystem=SUBSYSTEM,
     )
 )
+instrumentator.add(
+    model_metric(
+        metric_name="concept_emd",
+        metric_namespace=NAMESPACE,
+        metric_subsystem=SUBSYSTEM,
+    )
+)
 
 instrumentator.add(
     model_metric(
         metric_name="prediction_drift",
+        metric_namespace=NAMESPACE,
+        metric_subsystem=SUBSYSTEM,
+    )
+)
+instrumentator.add(
+    model_metric(
+        metric_name="prediction_emd",
         metric_namespace=NAMESPACE,
         metric_subsystem=SUBSYSTEM,
     )
@@ -100,10 +114,24 @@ instrumentator.add(
         metric_subsystem=SUBSYSTEM,
     )
 )
+instrumentator.add(
+    model_metric(
+        metric_name="prediction_prob_emd",
+        metric_namespace=NAMESPACE,
+        metric_subsystem=SUBSYSTEM,
+    )
+)
 
 instrumentator.add(
     model_metric(
         metric_name="prior_drift",
+        metric_namespace=NAMESPACE,
+        metric_subsystem=SUBSYSTEM,
+    )
+)
+instrumentator.add(
+    model_metric(
+        metric_name="prior_emd",
         metric_namespace=NAMESPACE,
         metric_subsystem=SUBSYSTEM,
     )
