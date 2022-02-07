@@ -111,20 +111,12 @@ cd k8s_deployment
 kubectl create -f namespaces.json
 ```
 
-Create the secrets using the format shown here, but replacing the secret with its true value:
-
-```
-kubectl create secret generic zms-user --from-literal ZMS_USER=<put_stuff_here>
-kubectl create secret generic zms-password --from-literal ZMS_PASSWORD=<put_stuff_here>
-kubectl create secret generic zms-dsn --from-literal ZMS_DSN=<put_stuff_here>
-```
-
 Now the service is ready.  Apply everything and then update /etc/hosts to route everything from the host name in  
 ingress.yaml to the Minikube instance.  
 
 ```
 kubectl apply -f .
-echo "$(minikube ip) zms-drift-monitoring-dev.app.cision.com" | sudo tee -a /etc/hosts
+echo "$(minikube ip) custom-domain.com" | sudo tee -a /etc/hosts
 ```
 
 The services should now be running in Minikube.  You can view them and open the Grafana service:
@@ -135,16 +127,6 @@ minikube service <service_name>
 ```
 
 The Grafana service is the only one that is exposed by a load balancer.
-
-Deployment requires setting the secrets associated with the Oracle DB with the article data.  This can be done using 
-kubectl's imperative commands in the cluster.  For example:
-
-```
-kubectl create secret generic zms_user --from-literal ZMS_USER=<put your username here>
-```
-
-Be sure to set these secrets for every environment variable that is sourced from secret in 
-drift-monitoring-service-deployment.yaml.
 
 <a name="developer-notes"></a>
 ## Helpful Notes for Developing & Testing
@@ -181,7 +163,7 @@ For example, this is the response header that was added to track model predictio
 ```
 response.headers["X-predicted"] = str(request_data_df["predicted_"][0])
 ```
-The header is added to the `/iterate` endpoint.  
+The header is added to the `/metrics` endpoint.  
 
 Next, define your new metric in `monitoring_service/metrics_instrumenation.py`.  You can copy the model_metric 
 function that is there now to get started.  Just replace the METRIC with whatever you want.  Note that there are 
@@ -206,13 +188,13 @@ If you click on the graph link at the top of the [targets page](http://localhost
 test Prometheus queries.  For example, if you want to check that your custom metric is being scraped by Prometheus, 
 simply search for it.  Note that the namespace and subsystem should come first in the metric name, as defined by the 
 environment variables in the Dockerfile.  So for example: `drift_monitoring_api_model_predicted` is the metric for 
-the predictions made by the model_api (or your production model) that have hit the /iterate endpoint in the drift monitoring API.  
+the predictions made by the model_api (or your production model) that have hit the /metrics endpoint in the drift monitoring API.  
 
 If the metric does not appear, you can run a sample request using the Swagger documentation for the drift monitoring 
 API.  Do this by going to [http://localhost:5000/docs](http://localhost:5000/docs) and sending a sample request.  When 
 you look back to the Prometheus graph page on localhost:9090/targets, you should see the time series update.  
 
-##### Metrics Per Client
+##### Metrics Per Model
 
 Since there is 1 model per client ID to be monitored, there needs to be a separate time series for each model.  This 
 functionality is handled by the metric label.  It is not best practice to have high cardinality in metric labels, but 
@@ -221,7 +203,7 @@ Prometheus can handle a few million time series.  See [this post on StackOverflo
 To test that your custom metric is working for each client.  Go to the [graph](http://localhost:9090/graph) and run a 
 PromQL query.  For example, you could query for the model predicted value for client 1:
 <br/>
-`drift_monitoring_api_model_predicted{client_id="1"}`
+`drift_monitoring_api_model_predicted{model_id="1"}`
 <br/>
 You can go to the [drift monitoring service API Swagger docs](http://localhost:5000/docs) to run a test query, and then 
 re-run your PromQL query to see the time series update.  
@@ -256,6 +238,7 @@ See [Grafana's docs](https://grafana.com/docs/) for anything else.
 The model API will be replaced by your model in production.  However, it was created here to test what might come out of 
 a model service and need to be monitored.  Running the example will hit this API.  You will notice in 
 `monitoring_service/examples/examples_run_request.py` that the data is first sent to the model API, then to the drift monitoring API.  
+
 To test that the data is in the format necessary, you can compare what comes back from the model API to what is expected 
 by the Pydantic model defined in monitoring_api.py.  Additionally, you can run 
 `monitoring_service/examples/test-reading_sample_response_from_model_api.py`, which was created solely for the 
