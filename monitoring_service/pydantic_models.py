@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 input_examples = {
@@ -12,14 +12,14 @@ input_examples = {
             "last_training_time": datetime.now(),
             "predictions": [
                 {
-                    "prediction_time": datetime.now(),
+                    "prediction_time": datetime.now() - timedelta(days=1),
                     "record_id": 101,
                     "prediction": 1,
                     "prediction_probability": 0.8,
                     "ground_truth_label": 1,
                 },
                 {
-                    "prediction_time": datetime.now(),
+                    "prediction_time": datetime.now() + timedelta(days=1),
                     "record_id": 102,
                     "prediction": 0,
                     "prediction_probability": 0.2,
@@ -36,14 +36,14 @@ input_examples = {
             "last_training_time": datetime.now(),
             "predictions": [
                 {
-                    "prediction_time": datetime.now(),
+                    "prediction_time": datetime.now() - timedelta(days=1),
                     "record_id": 101,
                     "prediction": 38.63,
                     "prediction_probability": None,
                     "ground_truth_label": 40.01,
                 },
                 {
-                    "prediction_time": datetime.now(),
+                    "prediction_time": datetime.now() + timedelta(days=1),
                     "record_id": 102,
                     "prediction": 45.90,
                     "prediction_probability": None,

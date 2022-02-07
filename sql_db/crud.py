@@ -9,6 +9,21 @@ from sql_db import db_models
 logging.basicConfig(level=logging.INFO)
 
 
+def get_all_predictions_for_model(db: Session, model_id: str):
+    """
+    Gets all predictions for a given modl ID
+    """
+    column_names = (
+            ["db_models.Models." + c.name for c in db_models.Models.__table__.columns] +
+            ["db_models.Predictions." + c.name for c in db_models.Predictions.__table__.columns]
+    )
+    columns = [eval(cname) for cname in column_names]
+    return db.query(*columns).join(
+        db_models.Predictions,
+        db_models.Models.model_id == db_models.Predictions.parent_model_id
+    ).all(), [c[c.rindex(".") + 1:] for c in column_names]
+
+
 def get_reference_predictions_for_model(db: Session, model_id: str):
     """
     Gets all predictions for a given model ID up until the last training time

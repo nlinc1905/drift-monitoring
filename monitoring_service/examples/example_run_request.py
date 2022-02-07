@@ -46,9 +46,10 @@ if __name__ == '__main__':
             'http://172.17.0.1:8000/predict',
             data=json.dumps(data, cls=NumpyEncoder, default=json_serial),
         )
+        model_api_response_str = json.loads(model_api_response.text)
 
         # now send the model API's response to the drift monitoring service API
-        requests.post('http://localhost:5000/metrics', json=model_api_response)
+        requests.post('http://localhost:5000/metrics', json=json.loads(model_api_response_str))
 
         # pause a bit to simulate a non-constant data stream
         time.sleep(1)

@@ -131,7 +131,9 @@ dmypy.json
 # Data files
 *.csv
 *.pkl
+*.db
 
 # Misc
 .DS_Store
 .idea
+drift_venv/

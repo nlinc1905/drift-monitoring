@@ -9,8 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
 
-ARTIFACTS_DIR = "../data/artifacts/"
-
+ARTIFACTS_DIR = "data/artifacts/"
 
 app = FastAPI()
 

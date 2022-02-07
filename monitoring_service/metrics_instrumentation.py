@@ -6,7 +6,7 @@ from prometheus_fastapi_instrumentator.metrics import Info
 
 
 NAMESPACE = os.environ.get("PROMETHEUS_METRICS_NAMESPACE", "drift_monitoring_api")
-SUBSYSTEM = os.environ.get("METRICS_SUBSYSTEM", "model")
+SUBSYSTEM = os.environ.get("PROMETHEUS_METRICS_SUBSYSTEM", "model")
 
 
 instrumentator = Instrumentator()

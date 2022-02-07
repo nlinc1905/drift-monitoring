@@ -17,12 +17,14 @@ services:
       dockerfile: Dockerfile
     environment:
       - PROMETHEUS_METRICS_NAMESPACE=drift_monitoring_api
-      - RESAMPLE_FOR_HYPOTHESIS_TEST=True
+      - PROMETHEUS_METRICS_SUBSYSTEM=model
       - PYTHONUNBUFFERED=1
+      - MIN_SAMPLE_SIZE=30
+      - NBR_SAMPLES_REQUIRED_FOR_BAYESIAN=2000
+      - RESAMPLE_FOR_HYPOTHESIS_TEST=True
     ports:
       - "5000:5000"
     volumes:
-      - /app/config/monitoring
       - monitoring_service_data:/app/data
       - monitoring_service_db:/app/sql_db
       - ./:/app
