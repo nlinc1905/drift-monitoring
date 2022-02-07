@@ -18,7 +18,6 @@ from sql_db.database import SessionLocal, engine
 
 
 MIN_SAMPLE_SIZE = int(os.environ.get("MIN_SAMPLE_SIZE", 30))
-NBR_SAMPLES_REQUIRED_FOR_BAYESIAN = int(os.environ.get("NBR_SAMPLES_REQUIRED_FOR_BAYESIAN", 2000))
 RESAMPLE_FOR_HYPOTHESIS_TEST = bool(os.environ.get("RESAMPLE_FOR_HYPOTHESIS_TEST", True))
 
 logging.basicConfig(level=logging.INFO)
@@ -108,70 +107,45 @@ async def compute_metrics(
             f"Moved {nbr_samples_needed} oldest comparison samples to reference set."
         )
 
-    # perform statistical tests, use Bayesian if there is sufficient data
-    if total_samples >= NBR_SAMPLES_REQUIRED_FOR_BAYESIAN:
-        prediction_drift = bayesian_a_b_test(
-            a_array=reference_df['prediction'],
-            b_array=request_df['prediction']
+    # perform statistical tests and distance computations
+    if inputdatamodel.model_type == "classifier":
+        concept_drift = chi_square_test(
+            reference_data=reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
+            current_data=request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
-        prior_drift = bayesian_a_b_test(
-            a_array=reference_df['ground_truth_label'],
-            b_array=request_df['ground_truth_label']
+        prediction_drift = chi_square_test(
+            reference_data=reference_df['prediction'],
+            current_data=request_df['prediction'],
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
         )
-        if inputdatamodel.model_type == "classifier":
-            concept_drift = bayesian_a_b_test(
-                a_array=reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
-                b_array=request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1)
-            )
-            prediction_prob_drift = bayesian_a_b_test(
-                a_array=reference_df['prediction_probability'],
-                b_array=request_df['prediction_probability']
-            )
-        else:
-            concept_drift = bayesian_a_b_test(
-                a_array=np.abs(reference_df['prediction'] - reference_df['ground_truth_label']),
-                b_array=np.abs(request_df['prediction'] - request_df['ground_truth_label'])
-            )
-            prediction_prob_drift = ""
+        prediction_prob_drift = ks_test(
+            reference_data=reference_df['prediction_probability'],
+            current_data=request_df['prediction_probability'],
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+        )
+        prior_drift = chi_square_test(
+            reference_data=reference_df['ground_truth_label'],
+            current_data=request_df['ground_truth_label'],
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+        )
     else:
-        if inputdatamodel.model_type == "classifier":
-            concept_drift = chi_square_test(
-                reference_data=reference_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
-                current_data=request_df.apply(lambda x: int(x['prediction'] == x['ground_truth_label']), axis=1),
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
-            prediction_drift = chi_square_test(
-                reference_data=reference_df['prediction'],
-                current_data=request_df['prediction'],
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
-            prediction_prob_drift = ks_test(
-                reference_data=reference_df['prediction_probability'],
-                current_data=request_df['prediction_probability'],
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
-            prior_drift = chi_square_test(
-                reference_data=reference_df['ground_truth_label'],
-                current_data=request_df['ground_truth_label'],
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
-        else:
-            concept_drift = ks_test(
-                reference_data=np.abs(reference_df['prediction'] - reference_df['ground_truth_label']),
-                current_data=np.abs(request_df['prediction'] - request_df['ground_truth_label']),
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
-            prediction_drift = ks_test(
-                reference_data=reference_df['prediction'],
-                current_data=request_df['prediction'],
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
-            prediction_prob_drift = ""
-            prior_drift = ks_test(
-                reference_data=reference_df['ground_truth_label'],
-                current_data=request_df['ground_truth_label'],
-                resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
-            )
+        concept_drift = ks_test(
+            reference_data=np.abs(reference_df['prediction'] - reference_df['ground_truth_label']),
+            current_data=np.abs(request_df['prediction'] - request_df['ground_truth_label']),
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+        )
+        prediction_drift = ks_test(
+            reference_data=reference_df['prediction'],
+            current_data=request_df['prediction'],
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+        )
+        prediction_prob_drift = ""
+        prior_drift = ks_test(
+            reference_data=reference_df['ground_truth_label'],
+            current_data=request_df['ground_truth_label'],
+            resample=RESAMPLE_FOR_HYPOTHESIS_TEST,
+        )
 
     # save the metrics to be tracked for each model to the response headers
     # the instrumentator in metrics_instrumentation.py will read from these headers
