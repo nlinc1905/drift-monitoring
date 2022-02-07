@@ -176,7 +176,7 @@ each of these is a green UP button, they are working.
 #### Adding a Custom Metric
 
 FastAPI has a Prometheus Instrumentator library for Python that is being used to integrate the drift monitoring service 
-with Prometheus.  To create a new metric, first add it to the response header in `monitoring_service/monitoring_api.py`.  
+with Prometheus.  To create a new metric, first add it to the response header in `monitoring_service/monitoring_api.py`.
 For example, this is the response header that was added to track model predictions:
 ```
 response.headers["X-predicted"] = str(request_data_df["predicted_"][0])
@@ -206,7 +206,7 @@ If you click on the graph link at the top of the [targets page](http://localhost
 test Prometheus queries.  For example, if you want to check that your custom metric is being scraped by Prometheus, 
 simply search for it.  Note that the namespace and subsystem should come first in the metric name, as defined by the 
 environment variables in the Dockerfile.  So for example: `drift_monitoring_api_model_predicted` is the metric for 
-the predictions made by the model_api (or CisionAI) that have hit the /iterate endpoint in the drift monitoring API.  
+the predictions made by the model_api (or your production model) that have hit the /iterate endpoint in the drift monitoring API.  
 
 If the metric does not appear, you can run a sample request using the Swagger documentation for the drift monitoring 
 API.  Do this by going to [http://localhost:5000/docs](http://localhost:5000/docs) and sending a sample request.  When 
@@ -253,7 +253,7 @@ See [Grafana's docs](https://grafana.com/docs/) for anything else.
 <a name="model-api"></a>
 ### The Model API
 
-The model API will be replaced by CisionAI in production.  However, it was created here to test what might come out of 
+The model API will be replaced by your model in production.  However, it was created here to test what might come out of 
 a model service and need to be monitored.  Running the example will hit this API.  You will notice in 
 `monitoring_service/examples/examples_run_request.py` that the data is first sent to the model API, then to the drift monitoring API.  
 To test that the data is in the format necessary, you can compare what comes back from the model API to what is expected 
