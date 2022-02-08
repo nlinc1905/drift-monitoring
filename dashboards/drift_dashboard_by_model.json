@@ -1,0 +1,792 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "iteration": 1644276593271,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 25,
+      "panels": [],
+      "title": "Dashboard Description",
+      "type": "row"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 14,
+      "options": {
+        "content": "# Model Drift Monitoring\n\n  This dashboard performs checks for concept drift, prediction drift, and prior drift.  Data drift (drift in the features) is not available at this time.\n\n  The filter at the top focuses the entire dashboard to 1  model.\n",
+        "mode": "markdown"
+      },
+      "pluginVersion": "8.2.3",
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 19,
+      "panels": [],
+      "title": "Concept Drift",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<strong>Classifiers</strong><br/>\nDrift is detected when the p-value of the Chi-squared test falls below 0.05 (the 95% confidence interval).\n<br/><br/>\n<strong>Regression</strong><br/>\nDrift is detected when the p-value of the Kolmogorov-Smirnov (KS) test falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nConcept Drift = when the distribution of model errors has changed, relative to the distribution of errors for the training set.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisLabel": "p-value",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "0.0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "0, Drift (95% CI)"
+                },
+                "0.05": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "No Drift"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model ID 1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 17,
+      "maxDataPoints": 1176,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_concept_drift",
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Concept Drift",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<a href=\"https://en.wikipedia.org/wiki/Earth_mover%27s_distance\">Earth Mover's Distance (EMD)</a> measures the similarity between the distribution of the training set's errors and the distribution of the current errors.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "EMD",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_concept_emd",
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Distribution Earth Mover's Distance",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 12,
+      "panels": [],
+      "title": "Prediction Drift",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<strong>Classifiers</strong><br/>\nPrediction drift is detected when the Chi-squared p-value falls below 0.05 (the 95% confidence interval).\n<strong>Regression</strong><br/>\nPrediction drift is detected when the Kolmogorov-Smirnov p-value falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nPrediction Drift = when the distribution of the model predictions has changed, relative to the prediction distribution of the training set.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "p-value",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "0.0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "0, Drift (95% CI)"
+                },
+                "0.05": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "No Drift"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_prediction_drift",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Prediction Drift",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<strong>Classifiers</strong><br/>\nPrediction probability drift is detected when the Kolmogorov-Smirnov p-value falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nPrediction Probability Drift = when the distribution of the model prediction probabilities has changed, relative to the prediction probability distribution of the training set.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "p-value",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "0.0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "0, Drift (95% CI)"
+                },
+                "0.05": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "No Drift"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_prediction_prob_drift",
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Prediction Probability Drift (Classifiers Only)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<a href=\"https://en.wikipedia.org/wiki/Earth_mover%27s_distance\">Earth Mover's Distance (EMD)</a> measures the similarity between the distribution of the training set's predictions and the distribution of the current predictions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "EMD",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_prediction_emd",
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Prediction Earth Mover's Distance",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 27,
+      "panels": [],
+      "title": "Prior Drift",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<strong>Classifiers</strong><br/>\nPrior drift is detected when the Chi-squared p-value falls below 0.05 (the 95% confidence interval).\n<strong>Regression</strong><br/>\nPrior drift is detected when the Kolmogorov-Smirnov p-value falls below 0.05 (the 95% confidence interval).\n<br/><br/>\nPrior Drift = when the distribution of the ground truth labels has changed, relative to the prediction distribution of the training set.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "p-value",
+            "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "0.0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "0, Drift (95% CI)"
+                },
+                "0.5": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "No Drift"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_prior_drift",
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Prior Drift",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "<a href=\"https://en.wikipedia.org/wiki/Earth_mover%27s_distance\">Earth Mover's Distance (EMD)</a> measures the similarity between the distribution of the training set's ground truth labels and the distribution of the current ground truth labels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "EMD",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "drift_monitoring_api_model_prior_emd",
+          "interval": "",
+          "legendFormat": "Model ID {{model_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ground Truth Earth Mover's Distance",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 31,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "datasource": "Prometheus",
+        "description": "Filter this dashboard to a specific model",
+        "error": null,
+        "filters": [],
+        "hide": 0,
+        "label": "Model ID Filter",
+        "name": "ModelFilter",
+        "skipUrlSync": false,
+        "type": "adhoc"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Drift Monitoring Dashboard - by Model",
+  "uid": "U54hsxv7k",
+  "version": 2
+}

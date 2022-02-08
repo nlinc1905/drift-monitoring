@@ -181,10 +181,10 @@ async def compute_metrics(
     # save the metrics to be tracked for each model to the response headers
     # the instrumentator in metrics_instrumentation.py will read from these headers
     response.headers["X-model_id"] = str(inputdatamodel.model_id)
-    response.headers["x-concept_drift"] = str(concept_drift)
-    response.headers["x-concept_drift_emd"] = str(concept_emd)
+    response.headers["X-concept_drift"] = str(concept_drift)
+    response.headers["X-concept_emd"] = str(concept_emd)
     response.headers["X-prediction_drift"] = str(prediction_drift)
-    response.headers["x-prediction_emd"] = str(prediction_emd)
+    response.headers["X-prediction_emd"] = str(prediction_emd)
     response.headers["X-prediction_prob_drift"] = str(prediction_prob_drift)
     response.headers["X-prediction_prob_emd"] = str(prediction_prob_emd)
     response.headers["X-prior_drift"] = str(prior_drift)

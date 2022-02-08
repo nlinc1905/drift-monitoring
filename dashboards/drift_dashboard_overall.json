@@ -20,12 +20,14 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
+  "gnetId": null,
   "graphTooltip": 0,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -38,11 +40,8 @@
       "type": "row"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Counts the number of models with concept drift or prior drift over time.  ",
+      "datasource": "Prometheus",
+      "description": "Counts the number of models with drift over time.  ",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -53,7 +52,7 @@
             "axisPlacement": "auto",
             "axisSoftMin": 0,
             "barAlignment": 0,
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
@@ -89,37 +88,7 @@
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Concept Drift"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Prior Drift"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 9,
@@ -131,7 +100,7 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "list",
+          "displayMode": "hidden",
           "placement": "right"
         },
         "tooltip": {
@@ -140,37 +109,20 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
           "exemplar": true,
-          "expr": "count(drift_monitoring_api_model_target<0.05)",
-          "interval": "",
-          "legendFormat": "Prior Drift",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "exemplar": true,
-          "expr": "count(drift_monitoring_api_model_predicted<0.05)",
+          "expr": "count(drift_monitoring_api_model_concept_drift<0.05 + drift_monitoring_api_model_prediction_drift<0.05 + drift_monitoring_api_model_prior_drift)",
+          "format": "time_series",
           "hide": false,
           "interval": "",
-          "legendFormat": "Concept Drift",
-          "refId": "B"
+          "legendFormat": "Models with Drift",
+          "refId": "A"
         }
       ],
-      "title": "Count Models with Concept or Prior Drift",
+      "title": "Count Models with Drift",
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+      "datasource": "Prometheus",
       "description": "Tracks the requests made to the drift monitoring API",
       "fieldConfig": {
         "defaults": {
@@ -178,8 +130,10 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisLabel": "",
+            "axisLabel": "Number of Requests",
             "axisPlacement": "auto",
+            "axisSoftMax": 1,
+            "axisSoftMin": 0,
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 0,
@@ -190,7 +144,7 @@
               "viz": false
             },
             "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -241,12 +195,9 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
           "exemplar": true,
           "expr": "drift_monitoring_api_model_http_requests_total",
+          "hide": false,
           "interval": "",
           "legendFormat": "{{method}} {{status}}",
           "refId": "A"
@@ -257,7 +208,7 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 33,
+  "schemaVersion": 31,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -271,6 +222,5 @@
   "timezone": "",
   "title": "Drift Monitoring Dashboard - High Level",
   "uid": "BDeZHa2nk",
-  "version": 2,
-  "weekStart": ""
+  "version": 1
 }
