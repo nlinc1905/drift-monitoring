@@ -18,8 +18,12 @@ spec:
         - env:
             - name: PROMETHEUS_METRICS_NAMESPACE
               value: drift_monitoring_api
+            - name: PROMETHEUS_METRICS_SUBSYSTEM
+              value: model
             - name: PYTHONUNBUFFERED
               value: "1"
+            - name: MIN_SAMPLE_SIZE
+              value: 30
             - name: RESAMPLE_FOR_HYPOTHESIS_TEST
               value: "True"
           image: drift-monitoring-service
