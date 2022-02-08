@@ -69,7 +69,7 @@ When you look at the drift monitoring dashboard in Grafana, you should see what 
 <a name="testing-multiple-models"></a>
 ### Testing Multiple Client IDs or Models
 
-We will have many client IDs/models.  To test this functionality, you can use the `-nc` or `--nbr_clients` argument 
+The service is built to support many client models or client IDs (assuming 1 model per client).  To test this functionality, you can use the `-nc` or `--nbr_clients` argument 
 for prepare_datasets.py.  The default is 1, but if you run
 ```
 docker exec <container_id> python3 monitoring_service/examples/prepare_datasets.py -nc 30
@@ -202,9 +202,9 @@ Prometheus can handle a few million time series.  See [this post on StackOverflo
 
 To test that your custom metric is working for each client.  Go to the [graph](http://localhost:9090/graph) and run a 
 PromQL query.  For example, you could query for the model predicted value for client 1:
-<br/>
-`drift_monitoring_api_model_predicted{model_id="1"}`
-<br/>
+```
+drift_monitoring_api_model_predicted{model_id="1"}
+```
 You can go to the [drift monitoring service API Swagger docs](http://localhost:5000/docs) to run a test query, and then 
 re-run your PromQL query to see the time series update.  
 
