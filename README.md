@@ -100,35 +100,23 @@ docker exec <container_id> python3 -m pytest
 
 The k8s_deployment folder has the config files for Kubernetes deployments.  
 
-To test the deployment locally with Minikube, first make sure that drift-monitoring-service-deployment.yaml is using 
+To test the deployment locally with Rancher Desktop, first make sure that drift-monitoring-deployment.yaml is using 
 imagePullPolicy: Never, instead of Always.  This will allow you to build the image locally, and K8s will not go out and 
-look for it.  
+look for it.  The command to build and tag the image (shown below) should be run from the root directory where the 
+Dockerfile is, and after you have started Rancher Desktop with nerdctl selected as a supporting utility.  
 
 ```
-minikube start
-minikube addons enable ingress
-eval $(minikube docker-env)
-docker build -t drift-monitoring-service .
+nerdctl --namespace=k8s.io build -t local/drift-monitoring:latest .
 cd k8s_deployment
 kubectl create -f namespaces.json
-```
-
-Now the service is ready.  Apply everything and then update /etc/hosts to route everything from the host name in  
-ingress.yaml to the Minikube instance.  
-
-```
 kubectl apply -f .
-echo "$(minikube ip) custom-domain.com" | sudo tee -a /etc/hosts
 ```
 
-The services should now be running in Minikube.  You can view them and open the Grafana service:
+The services should now be running.  You can test it with curl or a web browser:
 
 ```
-minikube service list
-minikube service <service_name>
+curl -L http://drift-monitoring.rancher.localhost/
 ```
-
-The Grafana service is the only one that is exposed by a load balancer.
 
 <a name="developer-notes"></a>
 ## Helpful Notes for Developing & Testing
