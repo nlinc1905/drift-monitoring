@@ -6,12 +6,12 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      component: prometheus
+      app: prometheus
   template:
     metadata:
       labels:
         io.kompose.network/back-tier: "true"
-        component: prometheus
+        app: prometheus
     spec:
       containers:
         - args:

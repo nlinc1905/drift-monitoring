@@ -6,13 +6,13 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      component: grafana
+      app: grafana
   template:
     metadata:
       labels:
         io.kompose.network/back-tier: "true"
         io.kompose.network/front-tier: "true"
-        component: grafana
+        app: grafana
     spec:
       containers:
         - image: grafana/grafana

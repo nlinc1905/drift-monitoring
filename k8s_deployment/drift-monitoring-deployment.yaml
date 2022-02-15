@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drift-monitoring-deployment
+  labels:
+    app: drift-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: drift-monitoring
+  replicas: 1
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      labels:
+        io.kompose.network/back-tier: "true"
+        io.kompose.network/front-tier: "true"
+        app: drift-monitoring
+    spec:
+      containers:
+      - name: drift-monitoring
+        image: local/drift-monitoring:latest  # change this to my_ecr/drift-monitoring:my_hash in Prod
+        imagePullPolicy: Never  # change this to Always in prod
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PROMETHEUS_METRICS_NAMESPACE
+          value: "drift_monitoring_api"
+        - name: PROMETHEUS_METRICS_SUBSYSTEM
+          value: "model"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: MIN_SAMPLE_SIZE
+          value: "30"
+        - name: RESAMPLE_FOR_HYPOTHESIS_TEST
+          value: "True"
+        volumeMounts:
+        - mountPath: /app
+          name: drift-monitoring-pvc
+      volumes:
+      - name: drift-monitoring-pvc
+        persistentVolumeClaim:
+          claimName: drift-monitoring-pvc

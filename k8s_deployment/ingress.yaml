@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: drift-monitoring-ingress
+spec:
+  rules:
+  - host: "drift-monitoring.rancher.localhost"  # change this to your DNS in prod
+    http:
+      paths:
+      - path: "/"
+        pathType: Prefix
+        backend:
+          service:
+            name: drift-monitoring-service
+            port:
+              number: 80
+  tls:
+    - hosts:
+        - drift-monitoring.rancher.localhost  # change this to your DNS in prod
