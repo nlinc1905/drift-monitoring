@@ -2,6 +2,8 @@
 
 Drift monitoring for machine learning models with Prometheus & Grafana
 
+![dashboard_sample](data/readme_files/grafana_dashboard_example.png)
+
 ## Contents
 1. [Running the Example](#running-the-example)
    1. [Testing Different Types of Drift](#testing-drift-types)
